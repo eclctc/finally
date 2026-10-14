@@ -121,7 +121,7 @@ finally/
 ## 5. Environment Variables
 
 ```bash
-# Required: OpenRouter API key for LLM chat functionality
+# Required for LLM chat unless LLM_MOCK=true
 OPENROUTER_API_KEY=your-openrouter-api-key-here
 
 # Optional: Massive (Polygon.io) API key for real market data
@@ -137,7 +137,8 @@ LLM_MOCK=false
 - If `MASSIVE_API_KEY` is set and non-empty → backend uses Massive REST API for market data
 - If `MASSIVE_API_KEY` is absent or empty → backend uses the built-in market simulator
 - If `LLM_MOCK=true` → backend returns deterministic mock LLM responses (for E2E tests)
-- The backend reads `.env` from the project root (mounted into the container or read via docker `--env-file`)
+- If `LLM_MOCK=false` and `OPENROUTER_API_KEY` is empty, the app still starts; `POST /api/chat` returns an error (see Section 9)
+- The backend reads `.env` from the project root (mounted into the container or read via docker `--env-file`). `.env` is optional: if it is missing the app starts with the simulator and chat errors as above
 
 ---
 
@@ -167,7 +168,8 @@ Both the simulator and the Massive client implement the same abstract interface.
 ### Shared Price Cache
 
 - A single background task (simulator or Massive poller) writes to an in-memory price cache
-- The cache holds the latest price, previous price, and timestamp for each ticker
+- The cache holds the latest price, previous price, timestamp, and the session open price (the first price seen for the ticker since backend start) for each ticker
+- The price source tracks the union of watchlist tickers and held positions, so every valued position always has a price
 - SSE streams read from this cache and push updates to connected clients
 - This architecture supports future multi-user scenarios without changes to the data layer
 
@@ -175,8 +177,9 @@ Both the simulator and the Massive client implement the same abstract interface.
 
 - Endpoint: `GET /api/stream/prices`
 - Long-lived SSE connection; client uses native `EventSource` API
-- Server pushes price updates for all tickers known to the system at a regular cadence (~500ms) — in the single-user model this is equivalent to the user's watchlist
-- Each SSE event contains ticker, price, previous price, timestamp, and change direction
+- Server pushes price updates for all tickers known to the system at a regular cadence (~500ms), but only when the cache version has changed — in the single-user model this is equivalent to the user's watchlist
+- Each SSE event is one JSON object keyed by ticker. Each ticker entry contains `ticker`, `price`, `previous_price`, `open_price`, `timestamp`, `change`, `change_percent` (vs previous tick), and `direction`
+- Daily change % shown in the watchlist is computed from `price` and `open_price` (the session open)
 - Client handles reconnection automatically (EventSource has built-in retry)
 
 ---
@@ -239,6 +242,13 @@ All tables include a `user_id` column defaulting to `"default"`. This is hardcod
 - `actions` TEXT (JSON — trades executed, watchlist changes made; null for user messages)
 - `created_at` TEXT (ISO timestamp)
 
+### Behavior Notes
+
+- **Concurrency**: the backend runs as a single process with a single uvicorn worker. SQLite runs in WAL mode and each trade executes in one transaction, so cash and position updates are atomic.
+- **Positions**: `avg_cost` is updated only on buys (weighted average) and is unchanged on sells. When a sell brings quantity to zero the position row is deleted.
+- **Snapshot retention**: snapshots older than 7 days are deleted whenever a new snapshot is recorded.
+- **Realized P&L**: not tracked or displayed in v1. Only unrealized P&L is shown; the `trades` table retains the data needed to add it later.
+
 ### Default Seed Data
 
 - One user profile: `id="default"`, `cash_balance=10000.0`
@@ -272,6 +282,17 @@ All tables include a `user_id` column defaulting to `"default"`. This is hardcod
 |--------|------|-------------|
 | POST | `/api/chat` | Send a message, receive complete JSON response (message + executed actions) |
 
+### Error Responses
+
+Validation failures return HTTP 400 with `{"error": "<reason>"}`. Trade validation rules (shared by manual trades and chat trades):
+
+- `quantity` must be greater than zero; fractional shares are allowed
+- `side` must be `buy` or `sell`
+- The ticker must have a price in the price cache (watchlist tickers and held positions always do); otherwise the trade is rejected as an unknown ticker
+- Buys require sufficient cash; sells require sufficient shares
+
+Watchlist adds: the ticker must match `^[A-Z]{1,5}$` and the price source must be able to price it. The simulator prices any such symbol using a random seed price; with Massive the add is rejected with 400 if the ticker is not found. Adding a ticker that is already watched is a no-op returning success; removing a ticker that is not watched returns 404.
+
 ### System
 | Method | Path | Description |
 |--------|------|-------------|
@@ -290,11 +311,11 @@ There is an OPENROUTER_API_KEY in the .env file in the project root.
 When the user sends a chat message, the backend:
 
 1. Loads the user's current portfolio context (cash, positions with P&L, watchlist with live prices, total portfolio value)
-2. Loads recent conversation history from the `chat_messages` table
+2. Loads the last 20 messages of conversation history from the `chat_messages` table
 3. Constructs a prompt with a system message, portfolio context, conversation history, and the user's new message
 4. Calls the LLM via LiteLLM → OpenRouter, requesting structured output, using the cerebras-inference skill
 5. Parses the complete structured JSON response
-6. Auto-executes any trades or watchlist changes specified in the response
+6. Auto-executes watchlist changes first, then trades (so a ticker added in the same response can be traded), via the same `execute_trade` and watchlist service functions used by the REST endpoints
 7. Stores the message and executed actions in `chat_messages`
 8. Returns the complete JSON response to the frontend (no token-by-token streaming — Cerebras inference is fast enough that a loading indicator is sufficient)
 
@@ -315,8 +336,8 @@ The LLM is instructed to respond with JSON matching this schema:
 ```
 
 - `message` (required): The conversational text shown to the user
-- `trades` (optional): Array of trades to auto-execute. Each trade goes through the same validation as manual trades (sufficient cash for buys, sufficient shares for sells)
-- `watchlist_changes` (optional): Array of watchlist modifications
+- `trades` (required, may be empty): Array of trades to auto-execute. Each trade goes through the same validation as manual trades (sufficient cash for buys, sufficient shares for sells)
+- `watchlist_changes` (required, may be empty): Array of watchlist modifications
 
 ### Auto-Execution
 
@@ -325,7 +346,11 @@ Trades specified by the LLM execute automatically — no confirmation dialog. Th
 - It creates an impressive, fluid demo experience
 - It demonstrates agentic AI capabilities — the core theme of the course
 
-If a trade fails validation (e.g., insufficient cash), the error is included in the chat response so the LLM can inform the user.
+If a trade fails validation (e.g., insufficient cash), the failure and its reason are recorded in the `actions` list of the response, shown inline in the chat, and stored with the message. There is only one LLM call per user message; because failed actions are stored in `chat_messages`, the LLM sees them in the conversation history on the next turn.
+
+### Failure Handling
+
+If the LLM call fails (OpenRouter error, timeout, missing API key, or output that does not parse against the schema), `POST /api/chat` returns HTTP 502 with `{"error": "<reason>"}`. Nothing is executed or stored. The UI shows the error inline in the chat panel. There is no retry.
 
 ### System Prompt Guidance
 
@@ -339,7 +364,14 @@ The LLM should be prompted as "FinAlly, an AI trading assistant" with instructio
 
 ### LLM Mock Mode
 
-When `LLM_MOCK=true`, the backend returns deterministic mock responses instead of calling OpenRouter. This enables:
+When `LLM_MOCK=true`, the backend returns deterministic mock responses instead of calling OpenRouter. The rules are fixed so E2E tests are predictable:
+
+- Message contains "buy" (case-insensitive): reply confirming the trade, with `trades` = buy 1 AAPL
+- Message contains "sell": reply confirming the trade, with `trades` = sell 1 AAPL
+- Message contains "add": reply confirming, with `watchlist_changes` = add PYPL
+- Anything else: a canned portfolio summary reply with empty `trades` and `watchlist_changes`
+
+This enables:
 - Fast, free, reproducible E2E tests
 - Development without an API key
 - CI/CD pipelines
@@ -352,7 +384,7 @@ When `LLM_MOCK=true`, the backend returns deterministic mock responses instead o
 
 The frontend is a single-page application with a dense, terminal-inspired layout. The specific component architecture and layout system is up to the Frontend Engineer, but the UI should include these elements:
 
-- **Watchlist panel** — grid/table of watched tickers with: ticker symbol, current price (flashing green/red on change), daily change %, and a sparkline mini-chart (accumulated from SSE since page load)
+- **Watchlist panel** — grid/table of watched tickers with: ticker symbol, current price (flashing green/red on change), daily change % (vs the session open price from the SSE payload), and a sparkline mini-chart (accumulated from SSE since page load)
 - **Main chart area** — larger chart for the currently selected ticker, with at minimum price over time. Clicking a ticker in the watchlist selects it here.
 - **Portfolio heatmap** — treemap visualization where each rectangle is a position, sized by portfolio weight, colored by P&L (green = profit, red = loss)
 - **P&L chart** — line chart showing total portfolio value over time, using data from `portfolio_snapshots`
@@ -364,7 +396,7 @@ The frontend is a single-page application with a dense, terminal-inspired layout
 ### Technical Notes
 
 - Use `EventSource` for SSE connection to `/api/stream/prices`
-- Canvas-based charting library preferred (Lightweight Charts or Recharts) for performance
+- Use Recharts for all charts (sparklines, main chart, P&L line chart, and the heatmap via its `Treemap`). One library keeps the dependency surface small; data volumes (10 tickers, 500ms updates) are well within SVG rendering limits
 - Price flash effect: on receiving a new price, briefly apply a CSS class with background color transition, then remove it
 - All API calls go to the same origin (`/api/*`) — no CORS configuration needed
 - Tailwind CSS for styling with a custom dark theme
@@ -376,7 +408,7 @@ The frontend is a single-page application with a dense, terminal-inspired layout
 ### Multi-Stage Dockerfile
 
 ```
-Stage 1: Node 20 slim
+Stage 1: Node 22 slim (LTS)
   - Copy frontend/
   - npm install && npm run build (produces static export)
 
@@ -405,9 +437,9 @@ The `db/` directory in the project root maps to `/app/db` in the container. The 
 
 **`scripts/start_mac.sh`** (macOS/Linux):
 - Builds the Docker image if not already built (or if `--build` flag passed)
-- Runs the container with the volume mount, port mapping, and `.env` file
+- Runs the container with the volume mount, port mapping, and `.env` file (passed only if `.env` exists)
 - Prints the URL to access the app
-- Optionally opens the browser
+- Opens the browser automatically (skip with `--no-open`)
 
 **`scripts/stop_mac.sh`** (macOS/Linux):
 - Stops and removes the running container
@@ -433,7 +465,7 @@ The container is designed to deploy to AWS App Runner, Render, or any container 
 - LLM: structured output parsing handles all valid schemas, graceful handling of malformed responses, trade validation within chat flow
 - API routes: correct status codes, response shapes, error handling
 
-**Frontend (React Testing Library or similar)**:
+**Frontend (Vitest + React Testing Library)**:
 - Component rendering with mock data
 - Price flash animation triggers correctly on price changes
 - Watchlist CRUD operations
@@ -454,3 +486,30 @@ The container is designed to deploy to AWS App Runner, Render, or any container 
 - Portfolio visualization: heatmap renders with correct colors, P&L chart has data points
 - AI chat (mocked): send a message, receive a response, trade execution appears inline
 - SSE resilience: disconnect and verify reconnection
+
+---
+
+## 13. Review Decisions
+
+Outcome of the document review. Each decision is incorporated in the section noted.
+
+| Topic | Decision | Section |
+|---|---|---|
+| Daily change % | Baseline is the session open price held in the price cache and sent in SSE | 6, 10 |
+| Trade validation | Positive quantity, fractional allowed, ticker must have a cached price | 8 |
+| Ticker validation | `^[A-Z]{1,5}$`; simulator prices any, Massive rejects unknown | 8 |
+| Position closing / avg cost | Row deleted at zero; avg cost changes on buys only | 7 |
+| Realized P&L | Excluded in v1 | 7 |
+| Chat history | Last 20 messages | 9 |
+| LLM failure | HTTP 502 with error, nothing stored | 9 |
+| Chat trade failures | Single LLM call; failures in `actions` and visible next turn via history | 9 |
+| Mock LLM | Fixed keyword rules | 9 |
+| Snapshot retention | Prune older than 7 days | 7 |
+| Concurrency | Single worker, WAL, one transaction per trade | 7 |
+| SSE payload | One JSON object keyed by ticker, sent on cache version change | 6 |
+| Missing `.env` / API key | App starts; chat returns an error | 5, 9, 11 |
+| Chat LLM contract | `trades` and `watchlist_changes` are required arrays | 9 |
+| Charting | Recharts only | 10 |
+| Browser open | Start scripts open automatically, `--no-open` to skip | 11 |
+| Frontend test framework | Vitest + React Testing Library | 12 |
+| Node version | Node 22 LTS | 11 |
