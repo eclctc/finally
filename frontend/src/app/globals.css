@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0d1117;
+  --color-panel: #131a24;
+  --color-raised: #1a2331;
+  --color-line: #253041;
+  --color-text: #d5dce6;
+  --color-muted: #7b8698;
+  --color-accent: #ecad0a;
+  --color-primary: #209dd7;
+  --color-secondary: #753991;
+  --color-up: #2fbf71;
+  --color-down: #f0524f;
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-ink);
+  color: var(--color-text);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+.figures {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes flash-up {
+  from { background-color: rgb(47 191 113 / 0.35); }
+  to { background-color: transparent; }
+}
+
+@keyframes flash-down {
+  from { background-color: rgb(240 82 79 / 0.35); }
+  to { background-color: transparent; }
+}
+
+.flash-up { animation: flash-up 500ms ease-out; }
+.flash-down { animation: flash-down 500ms ease-out; }
+
+@keyframes pulse-dot {
+  50% { opacity: 0.3; }
+}
+
+.loading-dot { animation: pulse-dot 1s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-up, .flash-down, .loading-dot { animation: none; }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
