@@ -14,14 +14,25 @@ Built by coding agents as the capstone for an agentic AI coding course.
 
 One Docker container serves everything on port 8000.
 
-## Status
+## Quick Start
 
-| Component | State |
-|---|---|
-| Market data (simulator, Massive client, price cache, SSE) | Done - see `planning/MARKET_DATA_SUMMARY.md` |
-| Portfolio, watchlist, chat API and database | Planned |
-| Frontend | Planned |
-| Docker, start/stop scripts, E2E tests | Planned |
+```bash
+cp .env.example .env        # add OPENROUTER_API_KEY for AI chat
+./scripts/start_mac.sh      # builds the image, runs on http://localhost:8000
+./scripts/stop_mac.sh       # stops the container; data persists in the finally-data volume
+```
+
+Windows: `scripts/start_windows.ps1` and `scripts/stop_windows.ps1`. Pass `--build` / `-Build` to rebuild, `--no-open` / `-NoOpen` to skip opening the browser.
+
+## Development
+
+```bash
+cd backend && uv run pytest                 # backend unit tests
+cd frontend && npm test                     # frontend unit tests
+cd test && npm run test:docker              # Playwright E2E in Docker (LLM_MOCK=true)
+```
+
+Run the backend locally: `cd backend && LLM_MOCK=true uv run uvicorn app.main:app --port 8000`.
 
 ## Configuration
 
@@ -35,7 +46,7 @@ Copy `.env` values as needed:
 
 ## Documentation
 
-The full specification is in [`planning/PLAN.md`](planning/PLAN.md).
+The full specification is in [`planning/PLAN.md`](planning/PLAN.md). Team contract and module interfaces: [`planning/TEAM.md`](planning/TEAM.md). Market data design: [`planning/market_data_design.md`](planning/market_data_design.md).
 
 ## License
 

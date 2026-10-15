@@ -1,0 +1,36 @@
+# Run: docker compose -p finally-test -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from playwright
+# Clean up: docker compose -p finally-test -f docker-compose.test.yml down -v
+name: finally-test
+
+services:
+  # Not named "app": Chromium HSTS-preloads .app and would force https.
+  finally:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      LLM_MOCK: "true"
+    ports:
+      - "8010:8000"
+    tmpfs:
+      - /app/db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.64.1-noble
+    working_dir: /e2e
+    environment:
+      BASE_URL: http://finally:8000
+      CI: "true"
+    volumes:
+      - .:/e2e
+      - /e2e/node_modules
+    command: sh -c "npm ci && npx playwright test"
+    ipc: host
+    depends_on:
+      finally:
+        condition: service_healthy
