@@ -49,8 +49,7 @@ Declared values (all multiples of 4):
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Icon-to-text gaps, tight inline padding |
-| sm | 8px | Gap between a label and its value, button inner padding (y), chip gaps |
-| cell | 12px | Panel title strip and table cell horizontal padding (`px-3`) |
+| sm | 8px | Gap between a label and its value, button inner padding (y), chip gaps, panel title strip and table cell horizontal padding (`px-2`), input horizontal padding |
 | md | 16px | Header horizontal padding (`px-4`), default gap between controls |
 | lg | 24px | Gap between groups inside a panel, remove-button hit box |
 | xl | 32px | Header gap between the two figure groups (`gap-8`), panel title strip height (`h-8`) |
@@ -72,8 +71,8 @@ Fixed component dimensions (also multiples of 4):
 | Minimum page width | 1024px (`min-w-[1024px]`) |
 
 Exceptions:
-- 1px hairlines: the `gap-px` grid gutters (they show `bg-line` between panels) and all 1px borders.
-- 10px connection dot (`size-2.5`, shipped in the Plan 01-03 Header markup).
+- 1px hairlines: the `gap-px` grid gutters (they show `bg-line` between panels) and all 1px borders. Reason: a gutter wider than one pixel would cost data area in a dense terminal, and the 1px `bg-line` gap doubles as the panel border.
+- 10px connection dot (`size-2.5`, shipped in the Plan 01-03 Header markup). Reason: it is a status glyph, not layout spacing. 8px reads too small beside 20px display text and 12px or 16px dominates the header; 10px is the Tailwind step Plan 01-03 already uses.
 - Controls are 28px, below the 44px touch-target guideline. This is a deliberate desktop-first, data-dense choice (PLAN.md section 2). Tablet is "functional", not touch-optimised.
 
 ---
@@ -141,19 +140,20 @@ Phase 1 renders only the strings in the first block. The second block is reserve
 | Wordmark | `Fin` + `Ally` (`Ally` in `text-accent`) |
 | Header figure labels | `Portfolio value`, `Cash` (siblings of the figure, never inside the testid element) |
 | Figure loading state | exactly `--` inside `cash-balance` and `total-value` until `/api/portfolio` answers |
+| Figure failed state | the figures keep showing exactly `--`, and a sibling line (not inside either testid element) reads `Portfolio unavailable. Reload the page to try again.` in `text-down`, Label style, `role="alert"`, `whitespace-nowrap` |
 | Figure loaded state | `formatCurrency` output only, for example `$10,000.00` |
 | Panel titles | `Watchlist`, `Chart`, `Trade`, `Heatmap`, `P&L`, `Positions`, `AI Chat` |
 | Connection dot `title` and `aria-label` | `Disconnected` (Phase 1 opens no stream; later `Connected` / `Reconnecting`) |
 | Primary CTA | none in Phase 1 |
 | Empty state heading and body | none: Phase 1 panels show only the title strip and an empty body. Do not add placeholder text, fake rows or "coming soon" copy. |
-| Error state | none rendered: a failed `/api/portfolio` request leaves `--` (Plan 01-03, accepted). No error UI, no retry. |
+| Error state | `Portfolio unavailable. Reload the page to try again.` shown when the `/api/portfolio` request fails. The solution path is a manual page reload; there is no in-app retry button or automatic retry. |
 | Destructive confirmation | none in this phase |
 
 ### Reserved for Phases 3 to 5 (use verbatim)
 
 | Element | Copy |
 |---------|------|
-| CTA labels | `Add` (watchlist), `Buy`, `Sell` (trade bar), `Send` (chat) |
+| CTA labels | `Add` (watchlist), `Buy`, `Sell` (trade bar), `Send` (chat). Bare verbs are deliberate: each sits directly beside the single input it acts on (ticker field, trade fields, chat box) under a titled panel (`Watchlist`, `Trade`, `AI Chat`), so the noun is already on screen, and a dense terminal bar has no room for longer labels. E2E specs locate these buttons by testid, not text, so the labels are free to stay short. |
 | Watchlist price with no data yet | `--` |
 | Watchlist empty (all removed) | heading `Watchlist is empty`, body `Enter a ticker above and press Add.` |
 | Positions empty | `No positions` |
@@ -182,7 +182,7 @@ Applicable state considerations resolved: 5 covered, 0 backstop, 0 unresolved (P
 | Category | Element(s) | Status | Resolution / Reason |
 |----------|------------|--------|---------------------|
 | loading | header figures (`cash-balance`, `total-value`) | ✅ covered | Before `/api/portfolio` answers, each shows exactly `--`, and the labels stay visible |
-| error | header figures | ✅ covered | A failed `/api/portfolio` request leaves `--` with no retry and no error UI (accepted in Plan 01-03) |
+| error | header figures | ✅ covered | A failed `/api/portfolio` request keeps `--` in both figures and shows the sibling line `Portfolio unavailable. Reload the page to try again.` in `text-down`; the solution path is a page reload (see Deviations #4) |
 | overflow | header figures | ✅ covered | Figures use `whitespace-nowrap` and `shrink-0`; the header fits values up to `$9,999,999.99` at the 1024px minimum width |
 | long-text | panel titles | ✅ covered | Titles are fixed short strings; the title `h2` carries `truncate` so an unexpected length clips instead of wrapping |
 | empty | placeholder panels (Watchlist, Chart, Trade, Heatmap, P&L, Positions, AI Chat) | ✅ covered | Each panel renders its title strip and an empty body; no placeholder text, rows or fake data |
@@ -211,15 +211,17 @@ Fixed terminal grid, no drag, resize or layout persistence. This is the Plan 01-
 - Below the header: `flex min-h-0 flex-1 gap-px bg-line`. The `gap-px` over `bg-line` draws the 1px panel borders between panels.
 - Left of the chat column: `main` as `grid min-h-0 flex-1 grid-cols-[minmax(300px,340px)_1fr] gap-px`. Right of that: `aside` at `w-[360px] shrink-0`.
 - Center grid: `grid-cols-[1fr_1fr_260px]` and `grid-rows-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)]`. At the 1600x1000 E2E viewport the rows resolve to about 366 / 293 / 249px.
-- Panel: `section` with `flex min-h-0 flex-col border border-line bg-panel`, a `h-8 px-3` title strip (`text-[11px] font-semibold text-muted`), then a `min-h-0 flex-1` body.
+- Panel: `section` with `flex min-h-0 flex-col border border-line bg-panel`, a `h-8 px-2` title strip (`text-[11px] font-semibold text-muted`), then a `min-h-0 flex-1` body.
 - Below 1024px wide the page scrolls horizontally rather than reflowing. Portrait tablets are therefore "functional", not optimised (PLAN.md: "responsive but desktop-first").
 - Every `data-testid` comes from the shared `testIds` module, never a string literal. Phase 1 attaches only `watchlist`, `heatmap`, `pnl-chart`, `positions-table`, `chat-panel` (panel wrappers), plus `cash-balance`, `total-value`, `connection-status` in the header. It must not attach `watchlist-row-*` or `main-chart` (the specs count rows and read `data-ticker`).
 
 ### Header (Phase 1)
 
 - Container: `flex h-14 shrink-0 items-center border-b border-line bg-panel px-4`.
+- Visual anchor: `total-value` is the sole focal figure of the Phase 1 shell. It is the only 20px element and the only accent-colored figure, so the eye lands on it first; the wordmark is secondary, and `Cash` is deliberately quieter (13px, `text-text`).
 - Left: wordmark, Heading style (18px / 600 / `leading-tight`), `Fin` in `text-text` and `Ally` in `text-accent`.
 - Right group (`ml-auto flex items-center gap-8`), in order:
+  0. Error line, rendered only after a failed `/api/portfolio` request: `Portfolio unavailable. Reload the page to try again.` (`role="alert"`, Label 11px, `text-down`, `whitespace-nowrap`, `shrink-0`). It is a sibling of the figure pairs, never inside `cash-balance` or `total-value`. Absent from the DOM while loading and after success. About 300px wide, so the header still fits at the 1024px minimum.
   1. `Portfolio value` (Label, `text-muted`) above `total-value` (Display 20px, `text-accent`, `.figures`).
   2. `Cash` (Label, `text-muted`) above `cash-balance` (Body 13px, `text-text`, `.figures`).
   3. Connection dot: 10px circle, `rounded-full`, `data-status` / `title` / `aria-label`; Phase 1 is `disconnected` with `bg-down`.
@@ -245,7 +247,7 @@ Defined once here so later plans do not re-decide them.
 - Under `prefers-reduced-motion: reduce`, drop the transition and the background; show the change by the text color alone.
 
 **Rows and tables**
-- Row height 28px, `px-3` cells, numeric columns right-aligned `.figures`, text columns left-aligned. Column heads are Label style in `text-muted` with a `border-b border-line`. No zebra striping.
+- Row height 28px, `px-2` cells, numeric columns right-aligned `.figures`, text columns left-aligned. Column heads are Label style in `text-muted` with a `border-b border-line`. No zebra striping.
 - Hover: `hover:bg-surface/60`. Selected watchlist row: `bg-surface` fill and ticker symbol in `text-accent` (600). Rows are keyboard focusable (`tabIndex=0`); Enter or Space selects. The remove button stops propagation so it does not select the row.
 - A row with no price yet still renders with `--`.
 - Overflowing lists scroll inside the panel body (`overflow-y-auto`); the page never grows.
@@ -287,13 +289,15 @@ No component registry is used. Third-party blocks: none declared. The only third
 
 ## Deviations and Reconciliations
 
-Shipped tokens are unchanged. Compared with `01-03-PLAN.md` (not yet executed), two small markup deltas are needed so the type scale holds to four sizes and two weights. Neither changes a testid, a text string or a test assertion.
+Shipped tokens are unchanged. Compared with `01-03-PLAN.md` (not yet executed), small markup deltas are needed so the type scale holds to four sizes and two weights, the spacing scale holds to the standard set, and the header has an error path. Deltas 1 to 3 change no testid, text string or test assertion. Delta 4 adds one new text node outside the testid elements. Delta 5 changes a padding class only.
 
 | # | Plan 01-03 says | This spec requires | Reason |
 |---|-----------------|--------------------|--------|
 | 1 | `Panel` title `h2`: `text-[12px] font-medium` | `text-[11px] font-semibold` (and `truncate`) | The plan introduced a 12px size and a 500 weight. That gives five sizes and three weights; the contract allows four and two. |
 | 2 | Wordmark `text-lg font-semibold` and `total-value` `figures text-xl text-accent` | Add `leading-tight` to both | Tailwind's default `text-lg` and `text-xl` line heights are about 1.56 and 1.4. The contract declares 1.25 for Heading and Display. |
 | 3 | Connection dot has `data-status` and `title` | Also set `aria-label` to the same string | Additive accessibility only. |
+| 4 | `Header.tsx` has no catch: a failed `request<PortfolioSummary>("/api/portfolio")` leaves `--` and nothing else | Hold a boolean `failed` state set by `.catch(() => setFailed(true))` on that one request. When true, render `<span role="alert" className="shrink-0 whitespace-nowrap text-[11px] text-down">Portfolio unavailable. Reload the page to try again.</span>` as the first child of the right group (before the `Portfolio value` pair). `cash-balance` and `total-value` still render exactly `--` and stay free of any other text. Add one Header test: with fetch rejecting, both testid elements have textContent `--` and the alert text is present. | Every error state for a data-bound element needs copy plus a solution path. This is a user-visible state, not defensive code: it adds one boolean and one message, no retry logic. |
+| 5 | `Panel` title strip `header`: `px-3` | `px-2` (8px). Any table cell padding added in later phases also uses `px-2`. | 12px was not in the standard spacing set (4, 8, 16, 24, 32, 48, 64). 8px matches the input padding and keeps data-dense rows tight. |
 
 Everything else in Plan 01-03 (header and panel markup, grid template, `--` loading text, wrapper testids, container-served shell) is adopted as written. Plans 01-02 and 01-04 have no visual output and need no change.
 
