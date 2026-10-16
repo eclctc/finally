@@ -82,7 +82,7 @@ None yet.
 
 - [Phase 1]: Open code-review warning WR-03 (vacuous testid parity test). WR-01, WR-02 and `color-scheme: dark` were fixed in Phase 3.
 - [Phase 3]: Open code-review advisories WR-01..WR-04, IN-01..IN-04 in 03-REVIEW-DISPOSITION.md (non-blocking): failed reload replaces the list, single `removing` slot / unordered loads, `clearTicker` drops a held ticker's live price, change color from unrounded value.
-- [Phase 4]: Open code-review advisories WR-01..WR-05, IN-01..IN-08 in 04-REVIEW-DISPOSITION.md (non-blocking). WR-01/WR-02 are reproduced test-timing races under heavy parallel load (Dashboard default-selection test, Watchlist flash/stream tests); WR-04 is a duplicate-order risk after a lost trade response. Phase 5 edits the same Dashboard/Watchlist tests.
+- [Phase 4]: Review warnings WR-01..WR-05 fixed (04-REVIEW-FIX.md); IN-01..IN-08 open (non-blocking). `TradeBar` now has a required `onUnconfirmed` prop (Dashboard passes `refresh`); `useWatchlist.load` has a latest-request guard, so Phase 5 05-03 must return `false` from a superseded load.
 - [Phase 4 → 5]: Phase 5 plans (6 in 4 waves) lift `useWatchlist` into `Dashboard` and make `load()` return `Promise<boolean>`.
 
 ## Deferred Items
