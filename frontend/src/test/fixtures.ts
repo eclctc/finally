@@ -1,3 +1,4 @@
+import type { Snapshot } from "@/lib/pnlSeries";
 import type { Portfolio, PortfolioPosition } from "@/lib/portfolioValue";
 
 /** Full SSE entry for one ticker; open price defaults to the price. */
@@ -70,4 +71,10 @@ export const makeTradeResponse = (
 ) => ({
   trade: { id: "trade-1", executed_at: "2026-10-16T21:00:59.139123+00:00", ...trade },
   portfolio,
+});
+
+/** GET /api/portfolio/history snapshot: the total value recorded at an ISO timestamp. */
+export const makeSnapshot = (totalValue: number, recordedAt: string): Snapshot => ({
+  total_value: totalValue,
+  recorded_at: recordedAt,
 });
