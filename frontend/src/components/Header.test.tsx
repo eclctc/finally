@@ -1,35 +1,17 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Header } from "@/components/Header";
 import { mergeFrame } from "@/lib/priceStore";
 import { connectPriceStream, RECREATE_DELAY_MS } from "@/lib/priceStream";
 import { testIds } from "@/lib/testIds";
-import { jsonResponse, makeFrame, makeFrameEntry } from "@/test/fixtures";
+import { makeFrame, makeFrameEntry, makePortfolio, makePosition } from "@/test/fixtures";
 import type { FakeEventSource } from "../../vitest.setup";
 
 const Fake = globalThis.EventSource as unknown as typeof FakeEventSource;
 
 const parseNumber = (text: string) => Number(text.replace(/[^0-9.-]/g, ""));
 
-const AAPL_POSITION = {
-  ticker: "AAPL",
-  quantity: 10,
-  avg_cost: 190,
-  current_price: 984.5178,
-  market_value: 9845.178,
-  unrealized_pnl: 0,
-  pnl_percent: 0,
-};
-
-function makePortfolio(cash: number, totalValue = cash, positions: object[] = []) {
-  return { cash_balance: cash, total_value: totalValue, positions_value: 0, unrealized_pnl: 0, positions };
-}
-
-function stubPortfolio(body: ReturnType<typeof makePortfolio>) {
-  const fetchMock = vi.fn(async () => jsonResponse(body));
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
+const AAPL_POSITION = makePosition("AAPL", 10, 190, 984.5178);
 
 afterEach(() => {
   vi.useRealTimers();
@@ -37,27 +19,22 @@ afterEach(() => {
 });
 
 describe("Header", () => {
-  it("shows -- in both figures while the portfolio request is pending", () => {
-    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
-    render(<Header />);
+  it("shows -- in both figures while there is no portfolio", () => {
+    render(<Header portfolio={null} failed={false} />);
     expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("--");
     expect(screen.getByTestId(testIds.totalValue).textContent).toBe("--");
   });
 
-  it("shows the fetched portfolio as bare currency figures after one request", async () => {
-    const fetchMock = stubPortfolio(makePortfolio(10000));
-    render(<Header />);
-    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$10,000.00"));
+  it("shows the portfolio as bare currency figures", () => {
+    render(<Header portfolio={makePortfolio(10000)} failed={false} />);
+    expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$10,000.00");
     expect(screen.getByTestId(testIds.totalValue).textContent).toBe("$10,000.00");
     expect(parseNumber(screen.getByTestId(testIds.cashBalance).textContent!)).toBe(10000);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith("/api/portfolio", undefined);
   });
 
-  it("revalues the total at live prices while cash stays the same", async () => {
-    stubPortfolio(makePortfolio(2500.5, 12345.678, [AAPL_POSITION]));
-    render(<Header />);
-    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$2,500.50"));
+  it("revalues the total at live prices while cash stays the same", () => {
+    render(<Header portfolio={{ ...makePortfolio(2500.5, [AAPL_POSITION]), total_value: 12345.678 }} failed={false} />);
+    expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$2,500.50");
     expect(screen.getByTestId(testIds.totalValue).textContent).toBe("$12,345.68");
 
     act(() => mergeFrame(makeFrame(makeFrameEntry("AAPL", 1000, 2))));
@@ -65,17 +42,13 @@ describe("Header", () => {
     expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$2,500.50");
   });
 
-  it("ignores the API total_value", async () => {
-    stubPortfolio(makePortfolio(10000, 99999));
-    render(<Header />);
-    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$10,000.00"));
+  it("ignores the API total_value", () => {
+    render(<Header portfolio={{ ...makePortfolio(10000), total_value: 99999 }} failed={false} />);
     expect(screen.getByTestId(testIds.totalValue).textContent).toBe("$10,000.00");
   });
 
-  it("never flashes the total or marks it as a live region", async () => {
-    stubPortfolio(makePortfolio(2500.5, 12345.678, [AAPL_POSITION]));
-    render(<Header />);
-    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$2,500.50"));
+  it("never flashes the total or marks it as a live region", () => {
+    render(<Header portfolio={makePortfolio(2500.5, [AAPL_POSITION])} failed={false} />);
     act(() => mergeFrame(makeFrame(makeFrameEntry("AAPL", 1000, 2))));
     const total = screen.getByTestId(testIds.totalValue);
     expect(total).not.toHaveAttribute("data-flash");
@@ -83,8 +56,7 @@ describe("Header", () => {
   });
 
   it("starts reconnecting", () => {
-    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
-    render(<Header />);
+    render(<Header portfolio={null} failed={false} />);
     const dot = screen.getByRole("status");
     expect(dot).toBe(screen.getByTestId(testIds.connectionStatus));
     expect(dot).toHaveAttribute("data-status", "reconnecting");
@@ -96,8 +68,7 @@ describe("Header", () => {
 
   it("follows the stream lifecycle", () => {
     vi.useFakeTimers();
-    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
-    render(<Header />);
+    render(<Header portfolio={null} failed={false} />);
     const stopStream = connectPriceStream();
     const dot = screen.getByTestId(testIds.connectionStatus);
     const expectDot = (status: string, label: string, color: string) => {
@@ -123,15 +94,13 @@ describe("Header", () => {
   });
 
   it("renders the wordmark as the only h1", () => {
-    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
-    render(<Header />);
+    render(<Header portfolio={null} failed={false} />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("FinAlly");
     expect(screen.getByText("Ally")).toHaveClass("text-accent");
   });
 
   it("keeps the labels outside the figure elements", () => {
-    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
-    render(<Header />);
+    render(<Header portfolio={null} failed={false} />);
     const total = screen.getByTestId(testIds.totalValue);
     const cash = screen.getByTestId(testIds.cashBalance);
     expect(screen.getByText("Portfolio value")).toBeInTheDocument();
@@ -140,20 +109,19 @@ describe("Header", () => {
     expect(cash).not.toContainElement(screen.getByText("Cash"));
   });
 
-  it("keeps -- and shows a sibling alert when the portfolio request fails", async () => {
-    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("network down"))));
-    render(<Header />);
-    const alert = await screen.findByRole("alert");
+  it("keeps -- and shows a sibling alert when the portfolio failed to load", () => {
+    render(<Header portfolio={null} failed={true} />);
+    const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("Portfolio unavailable. Reload the page to try again.");
     expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("--");
     expect(screen.getByTestId(testIds.totalValue).textContent).toBe("--");
   });
 
-  it("shows no alert while loading or after success", async () => {
-    stubPortfolio(makePortfolio(10000));
-    render(<Header />);
+  it("shows no alert while loading or after success", () => {
+    const { rerender } = render(<Header portfolio={null} failed={false} />);
     expect(screen.queryByRole("alert")).toBeNull();
-    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$10,000.00"));
+    rerender(<Header portfolio={makePortfolio(10000)} failed={false} />);
+    expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$10,000.00");
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });

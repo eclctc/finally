@@ -2,21 +2,29 @@ import { useCallback, useEffect, useState } from "react";
 import { request } from "./api";
 import type { Portfolio } from "./portfolioValue";
 
-/** GET /api/portfolio on mount; refresh() re-reads it (Phase 4 calls it after a trade). */
+/** GET /api/portfolio on mount; refresh() re-reads it and setPortfolio() applies a trade response. */
 export function usePortfolio() {
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [portfolio, setStoredPortfolio] = useState<Portfolio | null>(null);
   const [failed, setFailed] = useState(false);
 
-  const refresh = useCallback(() => {
-    request<Portfolio>("/api/portfolio")
-      .then((next) => {
-        setPortfolio(next);
-        setFailed(false);
-      })
-      .catch(() => setFailed(true));
+  const setPortfolio = useCallback((next: Portfolio) => {
+    setStoredPortfolio(next);
+    setFailed(false);
   }, []);
 
-  useEffect(refresh, [refresh]);
+  const refresh = useCallback(async () => {
+    try {
+      setPortfolio(await request<Portfolio>("/api/portfolio"));
+      return true;
+    } catch {
+      setFailed(true);
+      return false;
+    }
+  }, [setPortfolio]);
 
-  return { portfolio, failed, refresh };
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return { portfolio, failed, refresh, setPortfolio };
 }
