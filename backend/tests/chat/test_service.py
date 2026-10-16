@@ -178,3 +178,55 @@ async def test_reply_without_actions_stores_empty_list(conn, cache, source, fake
     assert result["actions"] == []
     assert repository.recent_chat_messages(conn)[-1].actions == []
     assert repository.get_cash(conn) == 10000.0
+
+
+CAP_TICKERS = ["PYPL", "UBER", "SHOP", "COIN", "PLTR", "SNOW", "ROKU"]
+
+
+async def test_actions_over_the_cap_are_skipped_not_rejected(conn, cache, source, fake_reply):
+    fake_reply["reply"] = reply(
+        trades=[("AAPL", "buy", 0.5)] * 7,
+        changes=[(ticker, "add") for ticker in CAP_TICKERS],
+    )
+
+    result = await handle_chat_message(conn, cache, source, "flood")
+
+    actions = result["actions"]
+    assert result["message"] == "ok"
+    assert len(actions) == 14
+    assert [(a["ticker"], a["status"]) for a in actions[:5]] == [(t, "ok") for t in CAP_TICKERS[:5]]
+    for skipped_change, ticker in zip(actions[5:7], ["SNOW", "ROKU"]):
+        assert skipped_change["type"] == "watchlist" and skipped_change["ticker"] == ticker
+        assert skipped_change["status"] == "failed"
+        assert skipped_change["error"].startswith("Skipped: only the first 5 watchlist changes")
+    assert [(a["type"], a["status"]) for a in actions[7:12]] == [("trade", "ok")] * 5
+    for skipped_trade in actions[12:]:
+        assert skipped_trade["type"] == "trade" and skipped_trade["status"] == "failed"
+        assert skipped_trade["error"].startswith("Skipped: only the first 5 trades")
+    assert repository.get_cash(conn) == 9750.0
+    assert repository.is_watched(conn, "PLTR")
+    assert not repository.is_watched(conn, "SNOW") and not repository.is_watched(conn, "ROKU")
+    assert repository.recent_chat_messages(conn)[-1].actions == actions
+
+
+@pytest.mark.parametrize(("count", "executed", "skipped"), [(5, 5, 0), (6, 5, 1)])
+async def test_trade_cap_boundary(conn, cache, source, fake_reply, count, executed, skipped):
+    fake_reply["reply"] = reply(trades=[("AAPL", "buy", 1)] * count)
+
+    result = await handle_chat_message(conn, cache, source, "buy")
+
+    statuses = [a["status"] for a in result["actions"]]
+    assert statuses.count("ok") == executed
+    assert statuses.count("failed") == skipped
+    assert repository.get_cash(conn) == 10000.0 - executed * 100
+
+
+async def test_cap_applies_per_kind(conn, cache, source, fake_reply):
+    fake_reply["reply"] = reply(
+        trades=[("AAPL", "buy", 1)] * 5,
+        changes=[(ticker, "add") for ticker in CAP_TICKERS[:5]],
+    )
+
+    result = await handle_chat_message(conn, cache, source, "both kinds at the cap")
+
+    assert [a["status"] for a in result["actions"]] == ["ok"] * 10
