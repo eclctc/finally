@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme static {
+  --color-surface: #0d1117;
+  --color-panel: #1a1a2e;
+  --color-line: #30363d;
+  --color-text: #d5dce6;
+  --color-muted: #7b8698;
+  --color-accent: #ecad0a;
+  --color-primary: #209dd7;
+  --color-submit: #753991;
+  --color-up: #2fbf71;
+  --color-down: #f0524f;
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+html, body { height: 100%; background: var(--color-surface); color: var(--color-text); }
+body { font-family: var(--font-sans); font-size: 13px; }
+.figures { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
