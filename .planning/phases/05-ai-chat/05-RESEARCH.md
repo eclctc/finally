@@ -614,21 +614,25 @@ A restart test marks again at t=2000 (during fade) and expects the attribute to 
 | A6 | Phase 4's final `refresh` / `refreshHistory` return promises (S1, S2) | Phase 4 seams | `await` would not wait; fall back to marking after `watchlist.load()` |
 | A7 | The 30s backend LLM timeout (`TIMEOUT_SECONDS = 30`, `llm.py:18`) is shorter than any proxy timeout in the Docker path, so the UI never needs its own timeout | Contract | A hung request would leave `Thinking...` forever. Not reachable in the shipped single-origin container; dev proxy limits not checked |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **"If the refresh fails, mark nothing" is not implementable as written.**
    - What we know: the lifted hooks catch their own request errors and resolve normally (Phase 4 Pattern 2; `useWatchlist.load` [VERIFIED: `useWatchlist.ts:25-27`] `} catch { setLoadFailed(true); }`), so `await Promise.all([...])` cannot tell success from failure.
    - What's unclear: whether the user cares. A failed refresh followed by a mark would highlight a stale or missing row, which is harmless (a missing row renders nothing).
    - Recommendation: mark after the refresh settles regardless, and record this as a deliberate relaxation of the spec sentence. If strictness is wanted, make `load` / `refresh` / `refreshHistory` return `Promise<boolean>` (touches Phase 4 hooks).
+   - **RESOLVED (strict):** Phase 4 already makes `refresh()` / `refreshHistory()` return `Promise<boolean>`; 05-03 makes `useWatchlist.load` return `Promise<boolean>` too, and 05-04 marks rows only when all three resolve `true`, so the spec sentence holds as written.
 
 2. **Lift vs registry for the watchlist reload.**
    - What we know: the lift is explicit and awaitable but changes the `Watchlist` signature and the Phase 4 test harness.
    - What's unclear: how much of `Watchlist.test.tsx` Phase 4 routes through one helper.
    - Recommendation: lift (decided above). Only if the harness turns out to be 26 inline renders, use a module-level `reloadWatchlist()` registry instead.
+   - **RESOLVED:** lift. Phase 4 routes every `Watchlist.test.tsx` render through `renderWatchlist()`, so 05-03 lifts `useWatchlist` into `Dashboard`.
 
 3. **Highlight on a hovered or selected row.** Resolved by Pattern 7/8 (single background utility, selected resting fill preserved); the hover edge case is a UAT backstop.
+   - **RESOLVED:** 05-04 uses `aiHighlightClass` alone while highlighted (one `bg-*` utility); hover stays a UAT backstop.
 
 4. **`WR-03` (removing a held ticker clears its live price).** AI removal of a held ticker will briefly fall back to the API price, the same as a manual removal. Not a chat concern; follow whatever Phase 4 decides (S12).
+   - **RESOLVED:** accepted as Phase 4 behaviour (WR-03 deferred in 04-02); 05-03 calls `clearTicker` like the manual path.
 
 ## Environment Availability
 
