@@ -5,7 +5,7 @@ titles: json
 findings:
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "Non-finite trade quantity from the LLM causes an HTTP 500 after the turn is stored"
   - id: WR-01
     severity: warning
@@ -27,8 +27,12 @@ findings:
     severity: info
     disposition: open
     title: "Action records use `.upper()` where the service normalizes with `strip().upper()`"
+  - id: IN-03
+    severity: info
+    disposition: open
+    title: "Subnormal quantity passes validation and fills at $0 (pre-existing, portfolio.py)"
 open: 6
-total: 6
+total: 7
 recorded: 2026-10-16T17:55:00.000Z
 ---
 
@@ -36,12 +40,13 @@ recorded: 2026-10-16T17:55:00.000Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | - |
+| CR-01 | critical | fixed | 02-06 (Field(allow_inf_nan=False) + route tests) |
 | WR-01 | warning | open | - |
 | WR-02 | warning | open | - |
 | WR-03 | warning | open | - |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
+| IN-03 | info | open | - |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.

@@ -2,10 +2,11 @@
 phase: 02-backend-hardening
 reviewed: 2026-10-16T00:00:00Z
 depth: standard
-files_reviewed: 23
+files_reviewed: 24
 files_reviewed_list:
   - backend/app/chat/llm.py
   - backend/app/chat/prompt.py
+  - backend/app/chat/schemas.py
   - backend/app/chat/service.py
   - backend/app/db/__init__.py
   - backend/app/db/connection.py
@@ -28,9 +29,9 @@ files_reviewed_list:
   - backend/tests/services/test_portfolio.py
   - backend/tests/services/test_watchlist.py
 findings:
-  critical: 1
+  critical: 0
   warning: 3
-  info: 2
+  info: 3
   total: 6
 status: issues_found
 ---
@@ -39,45 +40,30 @@ status: issues_found
 
 **Reviewed:** 2026-10-16
 **Depth:** standard
-**Files Reviewed:** 23
+**Files Reviewed:** 24
 **Status:** issues_found
 
 ## Summary
 
-Phase 2 changed the LLM error path, chat action isolation and caps, savepoint-based atomicity, the watchlist duplicate handling, session-open persistence, and two indexes. The suite passes (136 tests). Most of the work is sound. HARD-04, HARD-06, HARD-07 and HARD-08 hold up, and the "no write lock across the LLM call" property is tested properly.
+Phase 2 changed the LLM error path, chat action isolation and caps, savepoint-based atomicity, the watchlist duplicate handling, session-open persistence, and two indexes. The suite passes (145 tests). Most of the work is sound. HARD-04, HARD-06, HARD-07 and HARD-08 hold up, and the "no write lock across the LLM call" property is tested properly.
 
-I probed the edges with throwaway scripts (not committed) and found four real defects:
+**Re-review after gap-closure plan 02-06 (incremental):** CR-01 is resolved. `TradeInstruction.quantity` now uses `Field(allow_inf_nan=False)` (`backend/app/chat/schemas.py:13`). I verified against the real model that `NaN`, `Infinity`, `-Infinity`, `1e999`, and the string forms `"inf"`, `"nan"`, `"Infinity"`, `"1e999"` all raise `ValidationError` in `ChatReply.model_validate_json`. Those map to the fixed 502 `BAD_REPLY_ERROR` before anything executes or is stored. The REST trade route was probed separately: `Infinity` and `NaN` bodies return 400 (not 500), because the error message embeds the value as a string and nothing non-finite reaches the response. The new tests are meaningful: the router test asserts the 502, an untouched portfolio, no stored chat messages, and that the PYPL watchlist add in the same reply did not run. The `sys.float_info.max` test covers the largest finite value, which still flows through as a failed action with a serializable quantity. No new defects in the fix. One cosmetic observation is IN-03.
 
-- A non-finite `quantity` from the model still turns a chat turn into an HTTP 500, which defeats HARD-01 and HARD-05.
+The remaining open findings (WR-01..WR-03, IN-01..IN-02) were not in scope of the fix and are unchanged:
+
 - The new 30 s LLM timeout is effectively about 95 s.
 - `savepoint()` hides the original error in a case that real SQLite can produce.
 - A failure in the final chat-message insert leaves committed trades with no stored record.
 
 ## Critical Issues
 
-### CR-01: Non-finite trade quantity from the LLM causes an HTTP 500 after the turn is stored
+None open.
 
-**File:** `backend/app/chat/service.py:40-43` (also `backend/app/chat/schemas.py:13`, `backend/app/chat/service.py:109-115`)
-**Issue:** `ChatReply.model_validate_json` accepts `NaN`, `Infinity` and `1e999` as `float` quantities. I confirmed this by running `ChatReply.model_validate_json` on each input. The result was `nan`, `inf` and `inf`.
+### CR-01: [RESOLVED in 02-06] Non-finite trade quantity from the LLM caused an HTTP 500 after the turn was stored
 
-`execute_trade` rejects `inf` through the cash check ("Insufficient cash: need $inf") and rejects NaN through `not quantity > 0`. Either way the action is recorded as `failed`. `describe_trade` copies the raw `quantity` into the action dict, so the action carries `inf` or `nan`.
-
-`handle_chat_message` then does two things with that action dict:
-- `repository.insert_chat_message` stores it with `json.dumps`, which accepts non-finite floats, so the turn is committed.
-- FastAPI serializes the response with `allow_nan=False`, which raises.
-
-I reproduced this through `TestClient`. A model reply with `"quantity": Infinity` returned **500 Internal Server Error**. The user and assistant messages were already committed, and a second POST also returned 500.
-
-This breaks HARD-01 (the model's output should map to 502, not 500). It also breaks HARD-05 (one bad action must not abort the turn). A flaky or adversarial model can trigger it with one token.
-**Fix:** Reject non-finite numbers at the schema boundary so they surface as a 502 `BAD_REPLY_ERROR` before anything runs:
-```python
-# schemas.py
-class TradeInstruction(BaseModel):
-    ticker: str
-    side: Literal["buy", "sell"]
-    quantity: float = Field(allow_inf_nan=False)
-```
-Optionally also guard in `execute_trade` with `math.isfinite(quantity)`, so REST trades with `Infinity` fail with 400. Add a `test_parse_malformed_raises` case for `NaN` and `Infinity`.
+**File:** `backend/app/chat/schemas.py:13` (originally also `backend/app/chat/service.py:40-43`, `109-115`)
+**Issue (original):** `ChatReply.model_validate_json` accepted `NaN`, `Infinity` and `1e999` as `float` quantities. The failed action then carried a non-finite `quantity`, which `json.dumps` stored but FastAPI's response serialization (`allow_nan=False`) rejected, giving a 500 after the messages were committed.
+**Resolution:** `quantity: float = Field(allow_inf_nan=False)`. Verified: all non-finite JSON number and string forms are rejected at parse time and surface as 502. Tests added in `backend/tests/chat/test_llm.py` (string `inf`/`nan`/`-inf`, `null`) and `backend/tests/chat/test_router.py` (`NaN`, `Infinity`, `-Infinity`, `1e999` end to end, plus the largest finite float). Full suite: 145 passed.
 
 ## Warnings
 
@@ -132,6 +118,12 @@ The write-lock-not-held-across-the-LLM constraint makes full atomicity impossibl
 **File:** `backend/app/chat/service.py:29-36`
 **Issue:** `describe_trade` and `describe_watchlist_change` build the recorded ticker with `ticker.upper()`. The actual execution path uses `normalize_ticker`, which strips whitespace first. A model value like `" aapl"` executes against `AAPL`, but the stored and displayed action says `" AAPL"`. That is cosmetic, but the same record is replayed to the LLM as history. The same helper also yields over-cap `skipped` entries with unnormalized tickers.
 **Fix:** Use `normalize_ticker(trade.ticker)` in both `describe_*` helpers.
+
+### IN-03: Subnormal quantities pass the schema and fill as zero-cost trades; huge-quantity error text reads "$inf"
+
+**File:** `backend/app/chat/schemas.py:13`, `backend/app/services/portfolio.py:22, 38`
+**Issue:** Found while probing the 02-06 fix, and not caused by it. `allow_inf_nan=False` correctly stops non-finite values, but a quantity such as `5e-324` is finite and positive. It passes `not quantity > 0`. In `_apply_buy` the cost is `round(quantity * price, 2) == 0.0`, so by code reading a buy fills for $0 and writes a dust position and a trade row far below `QUANTITY_TOLERANCE` (1e-9). A model emitting such a value is unlikely, so this is minor. Separately, the `sys.float_info.max` case in the new test produces the user-facing text `Insufficient cash: need $inf` (the product overflows), which is cosmetic.
+**Fix:** Reject quantities below the tolerance in `execute_trade`, for example `if not quantity > QUANTITY_TOLERANCE: raise ValidationError("Quantity must be greater than zero")`. This also covers REST trades. Optionally use `Field(gt=0, allow_inf_nan=False)` on the schema so non-positive values become a 502 at parse time, but that would change the current behavior of recording them as failed actions, so decide deliberately.
 
 ---
 
