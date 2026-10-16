@@ -65,8 +65,8 @@ Filled in by the planner and executor as tasks are created. Requirement-level ma
 - [ ] `frontend/src/lib/priceStream.test.ts` — status mapping and CLOSED recreation with `FakeEventSource` (LIVE-01, LIVE-02)
 - [ ] `frontend/src/lib/portfolioValue.test.ts` (LIVE-08)
 - [ ] `frontend/src/components/{Watchlist,FlashingPrice,Sparkline}.test.tsx` (LIVE-03..LIVE-07)
-- [ ] `frontend/src/test/fixtures.ts` — `makeFrame()`, `makePortfolio()` builders
-- [ ] `frontend/vitest.setup.ts` — `priceStore.reset()` in the global `afterEach`
+- [ ] `frontend/src/test/fixtures.ts` — `makeFrame()` builder (portfolio stubs stay local to the tests that use them)
+- [ ] `frontend/vitest.setup.ts` — `resetPriceStore()` in the global `afterEach`
 - [ ] Update `frontend/src/components/Header.test.tsx` — stubs gain `positions: []`; replace "starts disconnected"; assert `data-status` mapping
 
 Framework install: none.

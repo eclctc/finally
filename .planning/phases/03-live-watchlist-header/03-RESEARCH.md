@@ -425,7 +425,9 @@ const FLASH_HOLD_MS = 50;
 | A5 | History cap of 300 and `RECREATE_DELAY_MS` of 1000 are good defaults | Patterns 3, 5 | Tuning only. |
 | A6 | A watchlist-load failure needs visible copy (no copy exists for it in the UI-SPEC reserved list) | Open Questions | If omitted, a failed `GET /api/watchlist` leaves an empty, unexplained panel. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All four are resolved: Q1 by UI-SPEC D-01 (1280px minimum width), Q2 by UI-SPEC D-02 (failed-load copy), Q3 by plan 03-03 (`usePortfolio()` hook), Q4 deferred to Phase 4 (plans 03-01..03-05 build no row selection).
 
 1. **Layout at the 1024px minimum width**
    - What we know: Chart/Heatmap cells collapse to ~68px at 1024 (01-UI-REVIEW.md); the watchlist column is `minmax(300px,340px)` and the row needs about 320px.
