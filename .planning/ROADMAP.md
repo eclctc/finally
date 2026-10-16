@@ -125,11 +125,11 @@ Research flag: spike the `EventSource` CLOSED path (non-200 response) against `t
   4. The heatmap shows each position as a labeled rectangle sized by market value and colored green or red by P&L, and it shows an empty state when there are no positions.
   5. The P&L chart plots total value over time (downsampled to about 300 points) with tooltips, a $10,000 baseline and a live tail point. History and portfolio refresh every 30 seconds.
 
-**Plans**: 7 plans
+**Plans**: 1/7 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 04-01-PLAN.md — Tracer: portfolio lifted into Dashboard; trade bar buys and sells and the header updates from the trade response; 30 s poll with a stale-response guard (TRADE-03, TRADE-04, TRADE-05, PORT-04)
+- [x] 04-01-PLAN.md — Tracer: portfolio lifted into Dashboard; trade bar buys and sells and the header updates from the trade response; 30 s poll with a stale-response guard (TRADE-03, TRADE-04, TRADE-05, PORT-04)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 04-02-PLAN.md — Selectable watchlist rows drive main-chart data-ticker and the trade ticker; default and fallback selection; prefill never clobbers typed text; WR-04 color rule (TRADE-01, TRADE-02)
@@ -193,6 +193,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 2 has no
 | 1. Walking Skeleton | 4/4 | Complete    | 2026-10-16 |
 | 2. Backend Hardening | 6/6 | Complete    | 2026-10-16 |
 | 3. Live Watchlist & Header | 5/5 | Complete    | 2026-10-16 |
-| 4. Trading & Portfolio | 0/7 | Not started | - |
+| 4. Trading & Portfolio | 1/7 | In Progress | - |
 | 5. AI Chat | 0/TBD | Not started | - |
 | 6. Ship & E2E Gate | 0/TBD | Not started | - |
