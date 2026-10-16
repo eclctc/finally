@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/Dashboard";
 import { testIds } from "@/lib/testIds";
-import { jsonResponse, makePortfolio, makePosition, makeTradeResponse, makeWatchlistEntry } from "@/test/fixtures";
+import { jsonResponse, makePortfolio, makePosition, makeSnapshot, makeTradeResponse, makeWatchlistEntry } from "@/test/fixtures";
 import type { FakeEventSource } from "../../vitest.setup";
 
 const Fake = globalThis.EventSource as unknown as typeof FakeEventSource;
@@ -223,5 +223,34 @@ describe("Dashboard", () => {
     await user.type(screen.getByTestId(testIds.tradeQuantity), "2");
     await user.click(screen.getByTestId(testIds.tradeSell));
     await waitFor(() => expect(screen.queryByTestId(testIds.positionRow("MSFT"))).not.toBeInTheDocument());
+  });
+
+  it("a trade refreshes the P&L history and the chart draws a line", async () => {
+    const fetchMock = routeFetch({
+      "GET /api/portfolio": () => jsonResponse(makePortfolio(9790, [makePosition("JPM", 1, 210, 210)])),
+      "GET /api/portfolio/history": () =>
+        jsonResponse({ snapshots: [makeSnapshot(10000, "2026-10-16T21:00:00.000000+00:00")] }),
+      "POST /api/portfolio/trade": () =>
+        jsonResponse(
+          makeTradeResponse(
+            { ticker: "JPM", side: "buy", quantity: 1, price: 210 },
+            makePortfolio(9580, [makePosition("JPM", 2, 210, 210)]),
+          ),
+        ),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    const pnl = screen.getByTestId(testIds.pnlChart);
+    await waitFor(() => expect(pnl.querySelectorAll("svg path.recharts-curve")).toHaveLength(1));
+
+    await user.type(screen.getByTestId(testIds.tradeTicker), "JPM");
+    await user.type(screen.getByTestId(testIds.tradeQuantity), "1");
+    await user.click(screen.getByTestId(testIds.tradeBuy));
+
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.filter(([path]) => path === "/api/portfolio/history")).toHaveLength(2),
+    );
+    expect(fetchMock.mock.calls.filter(([path]) => path === "/api/portfolio")).toHaveLength(1);
   });
 });

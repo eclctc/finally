@@ -5,10 +5,12 @@ import type { Portfolio } from "@/lib/portfolioValue";
 import { connectPriceStream } from "@/lib/priceStream";
 import { testIds } from "@/lib/testIds";
 import { usePortfolio } from "@/lib/usePortfolio";
+import { usePortfolioHistory } from "@/lib/usePortfolioHistory";
 import { Header } from "./Header";
 import { Heatmap } from "./Heatmap";
 import { MainChart } from "./MainChart";
 import { Panel } from "./Panel";
+import { PnlChart } from "./PnlChart";
 import { PositionsTable } from "./PositionsTable";
 import { TradeBar } from "./TradeBar";
 import { Watchlist } from "./Watchlist";
@@ -16,10 +18,17 @@ import { Watchlist } from "./Watchlist";
 /** Terminal layout: header above the titled panels; owns the one shared portfolio source. */
 export function Dashboard() {
   const { portfolio, failed, setPortfolio } = usePortfolio();
+  const { history, failed: historyFailed, refresh: refreshHistory } = usePortfolioHistory();
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
   useEffect(() => connectPriceStream(), []);
 
-  const handleFilled = useCallback((next: Portfolio) => setPortfolio(next), [setPortfolio]);
+  const handleFilled = useCallback(
+    (next: Portfolio) => {
+      setPortfolio(next);
+      refreshHistory();
+    },
+    [setPortfolio, refreshHistory],
+  );
 
   return (
     <div className="flex h-screen min-w-[1280px] flex-col bg-surface text-text">
@@ -37,7 +46,9 @@ export function Dashboard() {
             <Panel title="Heatmap" testId={testIds.heatmap}>
               <Heatmap portfolio={portfolio} failed={failed} />
             </Panel>
-            <Panel title="P&L" testId={testIds.pnlChart} className="col-span-2" />
+            <Panel title="P&L" testId={testIds.pnlChart} className="col-span-2">
+              <PnlChart history={history} failed={historyFailed} portfolio={portfolio} />
+            </Panel>
             <Panel title="Positions" testId={testIds.positionsTable} className="col-span-3">
               <PositionsTable portfolio={portfolio} failed={failed} />
             </Panel>
