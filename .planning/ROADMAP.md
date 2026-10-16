@@ -22,6 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Walking Skeleton
+
 **Goal:** As a student, I want to run the container and see the dark FinAlly shell at localhost:8000, so that the app ships end to end.
 **Mode:** mvp
 **Depends on**: Nothing (first phase)
@@ -32,16 +33,24 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `npm test` runs the Vitest + RTL harness green, and a component that uses `ResizeObserver`, `EventSource` or `scrollIntoView` renders under jsdom.
   4. `next dev` serves the shell with `/api/*` proxied to the backend on `:8000`, and SSE frames from `/api/stream/prices` arrive unbuffered.
   5. The theme colors (`#0d1117`/`#1a1a2e`, muted borders, `#ecad0a`, `#209dd7`, `#753991`) are usable as Tailwind tokens, and every E2E testid and number formatter comes from one shared module.
+
 **Plans**: 4 plans
 
 Plans:
+**Wave 1**
 - [ ] 01-01-PLAN.md — Package legitimacy check, then tracer: Next 16 static export with theme tokens built by the existing Dockerfile and served at :8000
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 01-02-PLAN.md — Vitest + RTL harness with ResizeObserver/EventSource/scrollIntoView stubs; testIds module with spec parity; bare-number formatters and fetch wrapper
-- [ ] 01-03-PLAN.md — Header reads real cash/total from /api/portfolio; terminal layout panels; rebuilt container serves the real-data shell
 - [ ] 01-04-PLAN.md — Dev loop: next dev proxies /api to :8000 with a 40 s unbuffered SSE check; README dev and build commands (wave 2, alongside 01-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 01-03-PLAN.md — Header reads real cash/total from /api/portfolio; terminal layout panels; rebuilt container serves the real-data shell
+
 **UI hint**: yes
 
 ### Phase 2: Backend Hardening
+
 **Goal:** As a trader, I want to get clean errors and consistent chat actions, so that the AI copilot is reliable.
 **Mode:** mvp
 **Depends on**: Nothing (independent of Phases 1, 3 and 4; must complete before Phase 5)
@@ -52,12 +61,14 @@ Plans:
   3. In a chat turn, an action that fails unexpectedly, or any trade or watchlist change past the cap of 5 each, appears as a `failed` action with a reason. The other actions still execute, the stored chat message matches exactly what was executed, and the DB write lock is not held across the LLM call.
   4. Removing a ticker and adding it back keeps its original session open price, so its daily change % does not reset.
   5. The backend pytest suite passes, with a new test that reproduces each fix, and the snapshot and chat history queries are backed by per-user, time-ordered indexes.
+
 **Plans**: TBD
 **UI hint**: no
 
 Research flag: prove the transaction boundary with a failing test first. `execute_trade`'s `with conn:` commits, so nesting does not give atomicity; use per-action SAVEPOINTs opened only after the LLM returns. Enforce the action cap in the service, not the schema.
 
 ### Phase 3: Live Watchlist & Header
+
 **Goal:** As a trader, I want to watch live prices stream into my watchlist, so that I can follow the market at a glance.
 **Mode:** mvp
 **Depends on**: Phase 1
@@ -68,12 +79,14 @@ Research flag: prove the transaction boundary with a failing test first. `execut
   3. A stream frame that carries only some tickers updates only those rows, and the other rows keep their last price. Held tickers that are not watched never appear as watchlist rows.
   4. The header connection dot is green when connected and yellow while reconnecting. It turns red only when the stream is closed, and it returns to green once the stream is recreated. The header also shows the cash balance (`10000` on a fresh DB) and a live total portfolio value.
   5. The user can add a ticker (input is uppercased, and an invalid symbol shows the 400 error inline) and remove a ticker, and the watchlist updates without a reload.
+
 **Plans**: TBD
 **UI hint**: yes
 
 Research flag: spike the `EventSource` CLOSED path (non-200 response) against `test/tests/sse-reconnect.spec.ts` before building the connection status logic.
 
 ### Phase 4: Trading & Portfolio
+
 **Goal:** As a trader, I want to chart, buy and sell tickers and see my portfolio update, so that I can manage my positions.
 **Mode:** mvp
 **Depends on**: Phase 3
@@ -84,12 +97,14 @@ Research flag: spike the `EventSource` CLOSED path (non-200 response) against `t
   3. After a successful trade, the cash balance, the positions table and the P&L chart update without a reload. The positions table shows ticker, quantity, average cost, live price, unrealized P&L and % change, and a row disappears when its position closes.
   4. The heatmap shows each position as a labeled rectangle sized by market value and colored green or red by P&L, and it shows an empty state when there are no positions.
   5. The P&L chart plots total value over time (downsampled to about 300 points) with tooltips, a $10,000 baseline and a live tail point. History and portfolio refresh every 30 seconds.
+
 **Plans**: TBD
 **UI hint**: yes
 
 Research flag: spike the Recharts 3 Treemap custom `content` renderer first. It must render `<rect>` (the default renders `<path>`) and always emit ticker labels, to satisfy the `svg rect` and `path.recharts-curve` selectors in `test/tests/portfolio-charts.spec.ts`.
 
 ### Phase 5: AI Chat
+
 **Goal:** As a trader, I want to ask the AI to analyze and trade for me, so that I can act through conversation.
 **Mode:** mvp
 **Depends on**: Phase 2, Phase 4
@@ -100,10 +115,12 @@ Research flag: spike the Recharts 3 Treemap custom `content` renderer first. It 
   3. Each trade and watchlist change the AI attempts shows inline under its reply with its status and reason, for both executed and failed actions.
   4. After a reply with successful actions, the watchlist, positions, cash and P&L chart refresh without a reload, and the rows the AI changed are briefly highlighted.
   5. A chat error (502) shows inline in the panel and the user's typed input is kept. Quick-prompt chips offer starter questions that contain no mock-trigger keywords (buy, sell, add).
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 6: Ship & E2E Gate
+
 **Goal:** As a student, I want to launch FinAlly with one script and see every E2E test pass, so that I know it all works.
 **Mode:** mvp
 **Depends on**: Phase 5
@@ -112,6 +129,7 @@ Research flag: spike the Recharts 3 Treemap custom `content` renderer first. It 
   1. Running `scripts/start_mac.sh` builds the image, launches the container and opens the browser to a working app at `http://localhost:8000`.
   2. The full Playwright suite in `test/` passes against the container with `LLM_MOCK=true`, covering fresh start, watchlist, trading, portfolio charts, chat and SSE reconnect. Failures are fixed in the app, not by weakening the specs.
   3. `npm test` passes, with Vitest + RTL coverage of the price store and merge logic, flash triggering, watchlist add/remove, portfolio revaluation math and chat rendering and loading state.
+
 **Plans**: TBD
 **UI hint**: no
 
