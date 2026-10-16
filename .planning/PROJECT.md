@@ -34,22 +34,23 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 - ✓ Each chat action is its own savepoint unit; unexpected failures become `failed` actions; no write lock across the LLM call — Phase 2
 - ✓ Chat turn capped at 5 trades and 5 watchlist changes; overflow recorded as `failed` — Phase 2
 - ✓ Session open price survives ticker remove/re-add; per-user time-ordered indexes on snapshots and chat — Phase 2
+- ✓ Header: live total at live prices, cash, connection dot (green/yellow/red) following the real stream — Phase 3
+- ✓ Watchlist panel: price flash (50ms hold, ~500ms fade, none under reduced motion), daily change % vs session open, 64x20 sparkline since load, add/remove with inline errors, loading/failed/empty states — Phase 3
+- ✓ `EventSource` SSE client: one stream, per-ticker store, CLOSED stream recreated after 1s — Phase 3
+- ✓ Layout keeps Chart and Heatmap usable: 1280px minimum width (D-01) — Phase 3
 
 ### Active
 
 **Frontend (built fresh, PLAN.md §10):**
-- [ ] Header: live total portfolio value, cash balance, connection status dot (green/yellow/red) — static header reading `/api/portfolio` shipped in Phase 1; live updates and dot in Phase 3
-- [ ] Watchlist panel: ticker, price with green/red flash (~500ms fade), daily change % vs session open, sparkline accumulated from SSE since page load, add/remove tickers
 - [ ] Main chart for the selected ticker (click a watchlist row to select)
 - [ ] Portfolio heatmap (Recharts Treemap) sized by weight, colored by P&L
 - [ ] P&L line chart from `/api/portfolio/history`
 - [ ] Positions table: ticker, qty, avg cost, current price, unrealized P&L, % change
 - [ ] Trade bar: ticker, quantity, buy/sell buttons, instant market fill, inline errors
 - [ ] AI chat panel: docked/collapsible, history, loading indicator, inline trade/watchlist confirmations and failures, inline 502 errors
-- [ ] `EventSource` SSE client with automatic reconnection
-- [ ] Recharts for all charts
-- [ ] Frontend unit tests with Vitest + React Testing Library (harness in place since Phase 1; coverage grows per phase)
-- [ ] Layout keeps Chart and Heatmap usable at the 1024px minimum (UI review found ~68px cells; decide before Phase 3)
+- [ ] Recharts for all charts (sparklines shipped in Phase 3)
+- [ ] Frontend unit tests with Vitest + React Testing Library (138 tests after Phase 3; coverage grows per phase)
+- [ ] Header total refreshes after trades: `usePortfolio()` lives only in Header; Phase 4 must lift or share it to call `refresh()`
 
 **Integration:**
 - [ ] `docker build` succeeds and `scripts/start_mac.sh` launches a working app at `http://localhost:8000`
@@ -95,6 +96,9 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 | Exact npm pins, committed lockfile, `npm ci` in Docker | Supply-chain control for the too-new package set | ✓ Good — Phase 1 security review |
 | Per-action committed savepoints, not one transaction per chat turn | Keeps awaits (Massive lookup, LLM) outside transactions | ✓ Good — Phase 2; residual: a failing final chat-row insert leaves actions unrecorded (WR-03, open) |
 | Non-finite LLM quantity rejects the whole reply (502) | Matches HARD-01 "unusable output"; reversible one-line choice | ✓ Good — Phase 2 gap closure |
+| Module-level price store read via `useSyncExternalStore`; SSE is the only price source, REST only seeds unpriced tickers | Per-ticker re-renders; avoids the REST-vs-stream race in `sse-reconnect.spec.ts` | ✓ Good — Phase 3 (UAT 4/4, Playwright 3/3) |
+| 1280px minimum width instead of 1024px | Chart/Heatmap cells were ~68px at 1024 | ✓ Good — Phase 3 UAT layout check |
+| Header shows the client-computed live total, not the API `total_value` | The total moves with every tick | ✓ Good — Phase 3; review WR-01..WR-04 open (watchlist refresh/race robustness, change color rounding) |
 
 ## Evolution
 
@@ -114,4 +118,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-16 after Phase 2*
+*Last updated: 2026-10-16 after Phase 3*

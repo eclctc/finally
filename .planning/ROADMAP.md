@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Walking Skeleton** - Next.js static export with dark theme, test harness and testid contract, built and served by the Docker container (completed 2026-10-16)
 - [x] **Phase 2: Backend Hardening** - Chat and watchlist APIs fail cleanly with 502s, idempotent adds, per-action failures and action caps (completed 2026-10-16)
-- [ ] **Phase 3: Live Watchlist & Header** - One SSE price store drives the watchlist rows, flashes, sparklines, connection dot and live header totals
+- [x] **Phase 3: Live Watchlist & Header** - One SSE price store drives the watchlist rows, flashes, sparklines, connection dot and live header totals (completed 2026-10-16)
 - [ ] **Phase 4: Trading & Portfolio** - Ticker selection, main chart, trade bar, positions table, heatmap and P&L chart
 - [ ] **Phase 5: AI Chat** - Docked chat panel with inline action results, error handling and a refresh after AI actions
 - [ ] **Phase 6: Ship & E2E Gate** - The start script launches a working app and the full Playwright suite passes with LLM_MOCK=true
@@ -94,7 +94,7 @@ Research flag: prove the transaction boundary with a failing test first. `execut
   4. The header connection dot is green when connected and yellow while reconnecting. It turns red only when the stream is closed, and it returns to green once the stream is recreated. The header also shows the cash balance (`10000` on a fresh DB) and a live total portfolio value.
   5. The user can add a ticker (input is uppercased, and an invalid symbol shows the 400 error inline) and remove a ticker, and the watchlist updates without a reload.
 
-**Plans**: 5/5 plans executed
+**Plans**: 5/5 plans complete
 
 Plans:
 **Wave 1**
@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 2 has no
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 4/4 | Complete    | 2026-10-16 |
 | 2. Backend Hardening | 6/6 | Complete    | 2026-10-16 |
-| 3. Live Watchlist & Header | 5/5 | In Progress | - |
+| 3. Live Watchlist & Header | 5/5 | Complete    | 2026-10-16 |
 | 4. Trading & Portfolio | 0/TBD | Not started | - |
 | 5. AI Chat | 0/TBD | Not started | - |
 | 6. Ship & E2E Gate | 0/TBD | Not started | - |

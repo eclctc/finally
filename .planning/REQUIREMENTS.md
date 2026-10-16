@@ -29,14 +29,14 @@ The backend already exists. See PROJECT.md "Validated" for the existing capabili
 
 ### Live Market Data UI
 
-- [ ] **LIVE-01**: The frontend opens one native `EventSource` to `/api/stream/prices`. Each frame is merged into a price store per ticker and never replaces it. The stream stays out of top-level React state.
-- [ ] **LIVE-02**: The header connection dot shows green for connected, yellow for reconnecting and red for disconnected, through `data-status`. Disconnected is shown only when the `EventSource` is CLOSED, and a closed stream is recreated.
-- [ ] **LIVE-03**: The watchlist panel lists the tickers from `GET /api/watchlist`. Each row shows ticker, live price and daily change % against the session `open_price`. A row with no price yet still renders with a placeholder.
-- [ ] **LIVE-04**: The price briefly flashes green on an uptick and red on a downtick, fading over about 500ms through a CSS transition.
-- [ ] **LIVE-05**: Each watchlist row has a sparkline built from a capped per-ticker history that the SSE stream fills from page load.
-- [ ] **LIVE-06**: The user can add a ticker from the watchlist panel. Input is uppercased, and a 400 error shows inline.
-- [ ] **LIVE-07**: The user can remove a ticker from the watchlist panel.
-- [ ] **LIVE-08**: The header shows the live total portfolio value (cash plus positions revalued at live prices) and the cash balance.
+- [x] **LIVE-01**: The frontend opens one native `EventSource` to `/api/stream/prices`. Each frame is merged into a price store per ticker and never replaces it. The stream stays out of top-level React state.
+- [x] **LIVE-02**: The header connection dot shows green for connected, yellow for reconnecting and red for disconnected, through `data-status`. Disconnected is shown only when the `EventSource` is CLOSED, and a closed stream is recreated.
+- [x] **LIVE-03**: The watchlist panel lists the tickers from `GET /api/watchlist`. Each row shows ticker, live price and daily change % against the session `open_price`. A row with no price yet still renders with a placeholder.
+- [x] **LIVE-04**: The price briefly flashes green on an uptick and red on a downtick, fading over about 500ms through a CSS transition.
+- [x] **LIVE-05**: Each watchlist row has a sparkline built from a capped per-ticker history that the SSE stream fills from page load.
+- [x] **LIVE-06**: The user can add a ticker from the watchlist panel. Input is uppercased, and a 400 error shows inline.
+- [x] **LIVE-07**: The user can remove a ticker from the watchlist panel.
+- [x] **LIVE-08**: The header shows the live total portfolio value (cash plus positions revalued at live prices) and the cash balance.
 
 ### Charts & Trading
 
@@ -120,14 +120,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HARD-06 | Phase 2 | Complete |
 | HARD-07 | Phase 2 | Complete |
 | HARD-08 | Phase 2 | Complete |
-| LIVE-01 | Phase 3 | Pending |
-| LIVE-02 | Phase 3 | Pending |
-| LIVE-03 | Phase 3 | Pending |
-| LIVE-04 | Phase 3 | Pending |
-| LIVE-05 | Phase 3 | Pending |
-| LIVE-06 | Phase 3 | Pending |
-| LIVE-07 | Phase 3 | Pending |
-| LIVE-08 | Phase 3 | Pending |
+| LIVE-01 | Phase 3 | Complete |
+| LIVE-02 | Phase 3 | Complete |
+| LIVE-03 | Phase 3 | Complete |
+| LIVE-04 | Phase 3 | Complete |
+| LIVE-05 | Phase 3 | Complete |
+| LIVE-06 | Phase 3 | Complete |
+| LIVE-07 | Phase 3 | Complete |
+| LIVE-08 | Phase 3 | Complete |
 | TRADE-01 | Phase 4 | Pending |
 | TRADE-02 | Phase 4 | Pending |
 | TRADE-03 | Phase 4 | Pending |
