@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ConnectionDot } from "@/components/ConnectionDot";
 import { request } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { testIds } from "@/lib/testIds";
@@ -34,9 +35,9 @@ export function Header() {
 
   return (
     <header className="flex h-14 shrink-0 items-center border-b border-line bg-panel px-4">
-      <span className="text-lg font-semibold leading-tight text-text">
+      <h1 className="text-lg font-semibold leading-tight text-text">
         Fin<span className="text-accent">Ally</span>
-      </span>
+      </h1>
       <div className="ml-auto flex items-center gap-8">
         {failed && (
           <span role="alert" className="shrink-0 whitespace-nowrap text-[11px] text-down">
@@ -53,13 +54,7 @@ export function Header() {
             {show(portfolio?.cash_balance)}
           </span>
         </Figure>
-        <span
-          data-testid={testIds.connectionStatus}
-          data-status="disconnected"
-          title="Disconnected"
-          aria-label="Disconnected"
-          className="size-2.5 shrink-0 rounded-full bg-down"
-        />
+        <ConnectionDot />
       </div>
     </header>
   );
