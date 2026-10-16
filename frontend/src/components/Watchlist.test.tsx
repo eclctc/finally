@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Watchlist } from "@/components/Watchlist";
-import { EMPTY_HISTORY, getEntry, getHistory, mergeFrame } from "@/lib/priceStore";
+import { EMPTY_SERIES, getEntry, getSeries, mergeFrame } from "@/lib/priceStore";
 import { testIds } from "@/lib/testIds";
 import { jsonResponse, makeFrame, makeFrameEntry, makeWatchlistEntry } from "@/test/fixtures";
 
@@ -352,12 +352,12 @@ describe("Watchlist add form", () => {
     renderWatchlist();
     await screen.findByTestId(testIds.watchlistRow("AAPL"));
     streamTick("AAPL", 200, 190);
-    const historyLength = getHistory("AAPL").length;
+    const historyLength = getSeries("AAPL").length;
     const user = userEvent.setup();
     await user.type(addInput(), "dis{Enter}");
     await screen.findByTestId(testIds.watchlistRow("DIS"));
     expect(priceCell("AAPL")).toHaveTextContent(/^200\.00$/);
-    expect(getHistory("AAPL")).toHaveLength(historyLength);
+    expect(getSeries("AAPL")).toHaveLength(historyLength);
   });
 });
 
@@ -395,7 +395,7 @@ describe("Watchlist remove", () => {
     ]);
     expect(screen.getByTestId(testIds.watchlistRow("MSFT"))).toBeInTheDocument();
     expect(getEntry("AAPL")).toBeUndefined();
-    expect(getHistory("AAPL")).toBe(EMPTY_HISTORY);
+    expect(getSeries("AAPL")).toBe(EMPTY_SERIES);
     expect(addInput()).toHaveFocus();
   });
 

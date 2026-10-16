@@ -3,9 +3,16 @@
 export type ConnectionStatus = "connected" | "reconnecting" | "disconnected";
 export type Flash = "up" | "down" | null;
 
-export const HISTORY_LIMIT = 300;
-/** Shared empty history so unknown tickers return a stable snapshot reference. */
-export const EMPTY_HISTORY: readonly number[] = Object.freeze([]);
+export const HISTORY_LIMIT = 1200;
+
+/** One streamed price; `t` is the frame timestamp in epoch milliseconds. */
+export interface PricePoint {
+  t: number;
+  price: number;
+}
+
+/** Shared empty series so unknown tickers return a stable snapshot reference. */
+export const EMPTY_SERIES: readonly PricePoint[] = Object.freeze([]);
 
 export interface PriceEntry {
   price: number;
@@ -26,7 +33,7 @@ export type PriceFrame = Record<string, FrameEntry>;
 type Listener = () => void;
 
 const entries = new Map<string, PriceEntry>();
-const histories = new Map<string, readonly number[]>();
+const histories = new Map<string, readonly PricePoint[]>();
 const tickerListeners = new Map<string, Set<Listener>>();
 const statusListeners = new Set<Listener>();
 const versionListeners = new Set<Listener>();
@@ -39,7 +46,8 @@ function notify(listeners: Set<Listener> | undefined) {
 
 function applyTick(ticker: string, next: { price: number; openPrice: number; timestamp: number }, flash: Flash) {
   entries.set(ticker, { ...next, flash });
-  histories.set(ticker, [...(histories.get(ticker) ?? []), next.price].slice(-HISTORY_LIMIT));
+  const point = { t: next.timestamp * 1000, price: next.price };
+  histories.set(ticker, [...(histories.get(ticker) ?? []), point].slice(-HISTORY_LIMIT));
   notify(tickerListeners.get(ticker));
 }
 
@@ -100,8 +108,8 @@ export function setStatus(next: ConnectionStatus) {
 
 /** Latest entry for a ticker, undefined until a price arrives. */
 export const getEntry = (ticker: string) => entries.get(ticker);
-/** Price history for a ticker, oldest first, capped at HISTORY_LIMIT. */
-export const getHistory = (ticker: string) => histories.get(ticker) ?? EMPTY_HISTORY;
+/** Timestamped price series for a ticker, oldest first, capped at HISTORY_LIMIT. */
+export const getSeries = (ticker: string) => histories.get(ticker) ?? EMPTY_SERIES;
 /** Current connection status. */
 export const getStatus = () => status;
 /** Counter that increments whenever any ticker changes. */
