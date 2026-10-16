@@ -1,7 +1,8 @@
 ---
 phase: "1"
 slug: walking-skeleton
-status: draft
+status: approved
+reviewed_at: "2026-10-16"
 shadcn_initialized: false
 preset: none
 created: "2026-10-16"
@@ -73,6 +74,7 @@ Fixed component dimensions (also multiples of 4):
 Exceptions:
 - 1px hairlines: the `gap-px` grid gutters (they show `bg-line` between panels) and all 1px borders. Reason: a gutter wider than one pixel would cost data area in a dense terminal, and the 1px `bg-line` gap doubles as the panel border.
 - 10px connection dot (`size-2.5`, shipped in the Plan 01-03 Header markup). Reason: it is a status glyph, not layout spacing. 8px reads too small beside 20px display text and 12px or 16px dominates the header; 10px is the Tailwind step Plan 01-03 already uses.
+- 2px focus outline (see Shared Interaction Patterns). Reason: it is a stroke width, not layout spacing, and 2px is the minimum that keeps keyboard focus visible against the dark surfaces.
 - Controls are 28px, below the 44px touch-target guideline. This is a deliberate desktop-first, data-dense choice (PLAN.md section 2). Tablet is "functional", not touch-optimised.
 
 ---
@@ -177,15 +179,24 @@ Tone: terse, factual, no exclamation marks, no emojis, no marketing language. Th
 
 ## UI Considerations
 
-Applicable state considerations resolved: 5 covered, 0 backstop, 0 unresolved (Phase 1 elements only; states for later-phase elements are specified under "Shared Interaction Patterns" and are owned by those phases).
+Applicable state considerations resolved: 9 covered, 0 backstop, 0 unresolved (Phase 1 elements only; states for later-phase elements are specified under "Shared Interaction Patterns" and are owned by those phases). Probe run 2026-10-16: 12 applicable considerations across 6 elements, kinds confirmed by the user (header figures, error line and layout grid corrected to `static-content`); 7 specified, 5 dismissed with reasons (below). The two header-figure `loading` / `error` rows are author-added explicit truths: the taxonomy raises those categories only for form, list, media and control kinds, but the figures are data-bound, so their states are kept.
 
 | Category | Element(s) | Status | Resolution / Reason |
 |----------|------------|--------|---------------------|
-| loading | header figures (`cash-balance`, `total-value`) | ✅ covered | Before `/api/portfolio` answers, each shows exactly `--`, and the labels stay visible |
-| error | header figures | ✅ covered | A failed `/api/portfolio` request keeps `--` in both figures and shows the sibling line `Portfolio unavailable. Reload the page to try again.` in `text-down`; the solution path is a page reload (see Deviations #4) |
-| overflow | header figures | ✅ covered | Figures use `whitespace-nowrap` and `shrink-0`; the header fits values up to `$9,999,999.99` at the 1024px minimum width |
-| long-text | panel titles | ✅ covered | Titles are fixed short strings; the title `h2` carries `truncate` so an unexpected length clips instead of wrapping |
-| empty | placeholder panels (Watchlist, Chart, Trade, Heatmap, P&L, Positions, AI Chat) | ✅ covered | Each panel renders its title strip and an empty body; no placeholder text, rows or fake data |
+| loading | header figures (`cash-balance`, `total-value`) | ✅ covered | Before `/api/portfolio` answers, each figure shows exactly `--` and both labels stay visible |
+| error | header figures (`cash-balance`, `total-value`) | ✅ covered | A failed `/api/portfolio` request keeps `--` in both figures and renders the header error line from the Copywriting Contract ("Figure failed state"); see Deviations #4 |
+| overflow | header figures (`cash-balance`, `total-value`) | ✅ covered | Figures use `whitespace-nowrap` and `shrink-0`; the header fits values up to `$9,999,999.99` at the 1024px minimum width without wrapping |
+| long-text | header figures (`cash-balance`, `total-value`) | ✅ covered | Figure text is formatter output only (`formatCurrency`), never wraps (`whitespace-nowrap`), and is bounded by the `$9,999,999.99` fit above |
+| overflow | header error line | ✅ covered | The line is `whitespace-nowrap` and `shrink-0`, about 300px wide, and the header still fits at the 1024px minimum width |
+| long-text | header error line | ✅ covered | The line is one fixed string (Copywriting Contract), rendered on a single line with `whitespace-nowrap`; it never wraps the header |
+| overflow | placeholder panels (Watchlist, Chart, Trade, Heatmap, P&L, Positions, AI Chat) | ✅ covered | Each panel body is `min-h-0 flex-1 overflow-y-auto` and owns its own scroll; the document never scrolls vertically |
+| long-text | placeholder panel titles | ✅ covered | Titles are fixed short strings; the title `h2` carries `truncate`, so an unexpected length clips with an ellipsis instead of wrapping |
+| overflow | dashboard layout grid | ✅ covered | Below the 1024px minimum width the page scrolls horizontally instead of reflowing; vertically, overflow is owned by each panel body |
+
+Dismissed (not applicable, user-confirmed, not lifted as truths):
+- connection dot, overflow and long-text: the dot is a fixed 10px circle with no visible text; its state name lives only in `title` / `aria-label`.
+- wordmark, overflow and long-text: a fixed 7-character brand string (`FinAlly`) in a header with ample room; its length never varies.
+- dashboard layout grid, long-text: the grid is a container that renders no text of its own; text inside it is covered by the panel and header rows above.
 
 <!-- Rows are replaced, not appended, if the ui-phase probe re-runs. -->
 
@@ -305,12 +316,12 @@ Everything else in Plan 01-03 (header and panel markup, grid template, `--` load
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
-- [ ] Dimension 7 Inventory Provenance: PASS
+- [x] Dimension 1 Copywriting: FLAG (non-blocking: bare-verb CTAs, justified above)
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: FLAG (non-blocking: 2px focus outline is a stroke width, not layout spacing)
+- [x] Dimension 6 Registry Safety: PASS
+- [x] Dimension 7 Inventory Provenance: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-10-16 (gsd-ui-checker re-check after revision 2a43aa5; 0 BLOCK, 2 FLAG)
