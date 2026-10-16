@@ -1,6 +1,6 @@
 import re
 
-from app.db import repository
+from app.db import repository, savepoint
 from app.errors import NotFoundError, ValidationError
 from app.market import MarketDataSource, PriceCache
 
@@ -25,14 +25,17 @@ async def add_to_watchlist(conn, source: MarketDataSource, raw_ticker: str) -> s
         return ticker
     if not await source.add_ticker(ticker):
         raise ValidationError(f"Unknown ticker: {ticker}")
-    repository.insert_watchlist_row(conn, ticker)
+    with savepoint(conn):
+        repository.insert_watchlist_row(conn, ticker)
     return ticker
 
 
 async def remove_from_watchlist(conn, source: MarketDataSource, ticker: str) -> None:
     """Unwatch a ticker; keep pricing it while it is still held. Raises NotFoundError."""
     ticker = normalize_ticker(ticker)
-    if not repository.delete_watchlist_row(conn, ticker):
+    with savepoint(conn):
+        removed = repository.delete_watchlist_row(conn, ticker)
+    if not removed:
         raise NotFoundError(f"{ticker} is not on the watchlist")
     if not repository.has_position(conn, ticker):
         await source.remove_ticker(ticker)

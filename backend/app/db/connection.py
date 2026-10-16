@@ -49,6 +49,19 @@ def get_connection() -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
+@contextmanager
+def savepoint(conn: sqlite3.Connection) -> Iterator[None]:
+    """Atomic unit of work: commits when outermost, rolls back only itself when nested."""
+    conn.execute("SAVEPOINT unit")
+    try:
+        yield
+    except Exception:
+        conn.execute("ROLLBACK TO unit")
+        conn.execute("RELEASE unit")
+        raise
+    conn.execute("RELEASE unit")
+
+
 def init_db() -> None:
     """Create tables and seed the default user and watchlist if missing. Idempotent."""
     with get_connection() as conn:

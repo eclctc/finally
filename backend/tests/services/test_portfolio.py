@@ -1,6 +1,8 @@
+import sqlite3
+
 import pytest
 
-from app.db import repository
+from app.db import repository, savepoint
 from app.errors import ValidationError
 from app.services.portfolio import execute_trade, execute_trade_and_sync, get_portfolio
 
@@ -85,3 +87,25 @@ async def test_closing_watched_position_keeps_tracking(conn, cache, source):
     await execute_trade_and_sync(conn, cache, source, "AAPL", "buy", 1)
     await execute_trade_and_sync(conn, cache, source, "AAPL", "sell", 1)
     assert "AAPL" in cache
+
+
+def test_trade_rolls_back_with_an_enclosing_savepoint(conn, cache):
+    with pytest.raises(RuntimeError):
+        with savepoint(conn):
+            execute_trade(conn, cache, "AAPL", "buy", 1)
+            raise RuntimeError("boom")
+    assert repository.get_cash(conn) == 10000.0
+    assert repository.get_position(conn, "AAPL") is None
+    assert conn.execute("SELECT COUNT(*) FROM trades").fetchone()[0] == 0
+
+
+async def test_trade_and_snapshot_are_one_unit(conn, cache, source, monkeypatch):
+    def failing_insert_snapshot(*args, **kwargs):
+        raise sqlite3.OperationalError("disk full")
+
+    monkeypatch.setattr(repository, "insert_snapshot", failing_insert_snapshot)
+    with pytest.raises(sqlite3.OperationalError):
+        await execute_trade_and_sync(conn, cache, source, "AAPL", "buy", 1)
+    assert repository.get_cash(conn) == 10000.0
+    assert repository.get_position(conn, "AAPL") is None
+    assert conn.execute("SELECT COUNT(*) FROM trades").fetchone()[0] == 0
