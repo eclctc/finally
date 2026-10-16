@@ -30,6 +30,24 @@ describe("Dashboard", () => {
     }
   });
 
+  it("names every panel as a region landmark", () => {
+    render(<Dashboard />);
+    for (const title of ["Watchlist", "Chart", "Trade", "Heatmap", "P&L", "Positions", "AI Chat"]) {
+      expect(screen.getByRole("region", { name: title })).toBeInTheDocument();
+    }
+  });
+
+  it("lays out the 1280px grid with fixed 320 / 224 / 320 columns", () => {
+    const { container } = render(<Dashboard />);
+    expect(container.firstElementChild).toHaveClass("min-w-[1280px]");
+    const main = screen.getByRole("main");
+    expect(main).toHaveClass("min-w-0", "grid-cols-[320px_minmax(0,1fr)]");
+    expect(screen.getByRole("region", { name: "Trade" }).parentElement).toHaveClass(
+      "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_224px]",
+    );
+    expect(screen.getByRole("complementary")).toHaveClass("w-[320px]");
+  });
+
   it("attaches the wrapper testids", () => {
     render(<Dashboard />);
     for (const id of [testIds.watchlist, testIds.heatmap, testIds.pnlChart, testIds.positionsTable, testIds.chatPanel]) {
