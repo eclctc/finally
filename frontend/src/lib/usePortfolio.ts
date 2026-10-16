@@ -1,30 +1,45 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { request } from "./api";
 import type { Portfolio } from "./portfolioValue";
 
-/** GET /api/portfolio on mount; refresh() re-reads it and setPortfolio() applies a trade response. */
+export const POLL_MS = 30_000;
+
+/**
+ * Shared portfolio source: GET /api/portfolio on mount and every POLL_MS, plus setPortfolio() for
+ * trade responses. A response applies only if nothing newer started since, so an older GET never
+ * overwrites a trade. `failed` is true only while no portfolio has loaded.
+ */
 export function usePortfolio() {
   const [portfolio, setStoredPortfolio] = useState<Portfolio | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failedLoad, setFailedLoad] = useState(false);
+  const generation = useRef(0);
 
   const setPortfolio = useCallback((next: Portfolio) => {
+    generation.current += 1;
     setStoredPortfolio(next);
-    setFailed(false);
+    setFailedLoad(false);
   }, []);
 
   const refresh = useCallback(async () => {
+    const mine = ++generation.current;
     try {
-      setPortfolio(await request<Portfolio>("/api/portfolio"));
+      const next = await request<Portfolio>("/api/portfolio");
+      if (generation.current === mine) {
+        setStoredPortfolio(next);
+        setFailedLoad(false);
+      }
       return true;
     } catch {
-      setFailed(true);
+      if (generation.current === mine) setFailedLoad(true);
       return false;
     }
-  }, [setPortfolio]);
+  }, []);
 
   useEffect(() => {
     refresh();
+    const timer = setInterval(refresh, POLL_MS);
+    return () => clearInterval(timer);
   }, [refresh]);
 
-  return { portfolio, failed, refresh, setPortfolio };
+  return { portfolio, failed: failedLoad && portfolio === null, refresh, setPortfolio };
 }
