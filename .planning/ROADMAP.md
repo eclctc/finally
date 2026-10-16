@@ -164,7 +164,23 @@ Research flag: spike the Recharts 3 Treemap custom `content` renderer first. It 
   4. After a reply with successful actions, the watchlist, positions, cash and P&L chart refresh without a reload, and the rows the AI changed are briefly highlighted.
   5. A chat error (502) shows inline in the panel and the user's typed input is kept. Quick-prompt chips offer starter questions that contain no mock-trigger keywords (buy, sell, add).
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+**Wave 1**
+- [ ] 05-01-PLAN.md — Tracer: a chat buy shows the reply, its BUY chip and the new position row (portfolio and history refresh); action-chip contract for every outcome (CHAT-01, CHAT-03, CHAT-05)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 05-02-PLAN.md — Send lifecycle: inline 502 with the text kept and attempt replaced, Thinking... with a locked composer and one request per action, Enter / Shift+Enter, empty state and quick-prompt chips, scroll to newest (CHAT-01, CHAT-02, CHAT-04, CHAT-06)
+- [ ] 05-03-PLAN.md — useWatchlist lifted into Dashboard; AI adds and removes reload the watchlist, removals clear the price store, load reports success (CHAT-05)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 05-04-PLAN.md — AI-change highlight store (1.5 s hold, 1 s fade) and data-ai-changed on position and watchlist rows, marked only after a fully successful refresh (CHAT-05, D-03)
+- [ ] 05-05-PLAN.md — Panel actions prop; collapse to a 40px rail and expand with the conversation, draft, pending request and error kept; focus rules (CHAT-01)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 05-06-PLAN.md — Phase gate: rebuilt container passes chat.spec.ts and the whole Playwright suite on a fresh database; backend suite; browser UAT (all CHAT requirements)
+
 **UI hint**: yes
 
 ### Phase 6: Ship & E2E Gate
