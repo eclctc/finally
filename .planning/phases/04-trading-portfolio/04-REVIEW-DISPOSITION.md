@@ -13,11 +13,11 @@ findings:
     title: "Store-driven Watchlist and Dashboard tests assert synchronously after `act` on timing they do not control"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`TradeBar` selection sync reads and writes a mutable ref inside a state updater"
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A failed trade request tells the user to \"Try again\" without checking whether it filled"
   - id: WR-05
     severity: warning
@@ -55,9 +55,9 @@ findings:
     severity: info
     disposition: open
     title: "Trade result live regions are mounted together with their text"
-open: 13
+open: 11
 total: 13
-recorded: 2026-10-16T23:17:37.504Z
+recorded: 2026-10-16T23:56:02.225Z
 ---
 
 # Phase 04: Code Review Disposition
@@ -66,8 +66,8 @@ recorded: 2026-10-16T23:17:37.504Z
 |---------|----------|-------------|--------|
 | WR-01 | warning | open | - |
 | WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
+| WR-03 | warning | fixed | 04-REVIEW-FIX.md |
+| WR-04 | warning | fixed | 04-REVIEW-FIX.md |
 | WR-05 | warning | open | - |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
