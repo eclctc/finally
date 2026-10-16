@@ -42,7 +42,7 @@ describe("Sparkline", () => {
 
   it("adds no keyboard focus stop", () => {
     const { container } = render(<Sparkline history={[1, 2, 3]} />);
-    expect(container.querySelector("[tabindex]")).toBeNull();
+    expect(container.querySelector('[tabindex]:not([tabindex="-1"])')).toBeNull();
   });
 
   it("fills in tick by tick and empties again after clearTicker", () => {
