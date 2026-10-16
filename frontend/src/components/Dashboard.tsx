@@ -9,6 +9,7 @@ import { Header } from "./Header";
 import { Heatmap } from "./Heatmap";
 import { MainChart } from "./MainChart";
 import { Panel } from "./Panel";
+import { PositionsTable } from "./PositionsTable";
 import { TradeBar } from "./TradeBar";
 import { Watchlist } from "./Watchlist";
 
@@ -37,7 +38,9 @@ export function Dashboard() {
               <Heatmap portfolio={portfolio} failed={failed} />
             </Panel>
             <Panel title="P&L" testId={testIds.pnlChart} className="col-span-2" />
-            <Panel title="Positions" testId={testIds.positionsTable} className="col-span-3" />
+            <Panel title="Positions" testId={testIds.positionsTable} className="col-span-3">
+              <PositionsTable portfolio={portfolio} failed={failed} />
+            </Panel>
           </div>
         </main>
         <aside className="w-[320px] shrink-0">
