@@ -17,17 +17,23 @@ const changeColor = (change: number | undefined) => {
 
 interface WatchlistRowProps {
   ticker: string;
+  selected: boolean;
   removing: boolean;
+  onSelect: (ticker: string) => void;
   onRemove: (ticker: string) => void;
 }
 
 /** One watchlist row: ticker, live price, daily change vs the session open, sparkline and remove button. */
-export const WatchlistRow = memo(function WatchlistRow({ ticker, removing, onRemove }: WatchlistRowProps) {
+export const WatchlistRow = memo(function WatchlistRow({ ticker, selected, removing, onSelect, onRemove }: WatchlistRowProps) {
   const entry = useTickerPrice(ticker);
   const history = useTickerHistory(ticker);
   const change = entry && dailyChange(entry);
   return (
-    <li data-testid={testIds.watchlistRow(ticker)} className="flex h-7 items-center gap-1 px-2">
+    <li
+      data-testid={testIds.watchlistRow(ticker)}
+      onClick={() => onSelect(ticker)}
+      className="flex h-7 items-center gap-1 px-2"
+    >
       <span className="min-w-0 flex-1 truncate font-semibold text-text">{ticker}</span>
       <FlashingPrice ticker={ticker} entry={entry} />
       <span
@@ -43,7 +49,10 @@ export const WatchlistRow = memo(function WatchlistRow({ ticker, removing, onRem
         aria-label={`Remove ${ticker}`}
         title={`Remove ${ticker}`}
         disabled={removing}
-        onClick={() => onRemove(ticker)}
+        onClick={(event) => {
+          event.stopPropagation();
+          onRemove(ticker);
+        }}
         className="size-6 shrink-0 text-muted hover:text-down disabled:opacity-50 focus-visible:outline-2 outline-primary"
       >
         ×

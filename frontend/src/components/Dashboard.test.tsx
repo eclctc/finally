@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/Dashboard";
 import { testIds } from "@/lib/testIds";
-import { jsonResponse, makePortfolio, makePosition, makeTradeResponse } from "@/test/fixtures";
+import { jsonResponse, makePortfolio, makePosition, makeTradeResponse, makeWatchlistEntry } from "@/test/fixtures";
 import type { FakeEventSource } from "../../vitest.setup";
 
 const Fake = globalThis.EventSource as unknown as typeof FakeEventSource;
@@ -64,10 +64,28 @@ describe("Dashboard", () => {
     }
   });
 
-  it("attaches no watchlist row testids and no main chart testid yet", () => {
+  it("attaches no watchlist row testids and an unselected main chart while the watchlist loads", () => {
     const { container } = render(<Dashboard />);
     expect(container.querySelectorAll('[data-testid^="watchlist-row-"]')).toHaveLength(0);
-    expect(screen.queryByTestId(testIds.mainChart)).toBeNull();
+    expect(screen.getByTestId(testIds.mainChart)).toBeInTheDocument();
+    expect(screen.getByTestId(testIds.mainChart)).not.toHaveAttribute("data-ticker");
+  });
+
+  it("clicking a watchlist row selects it in the main chart and the trade bar", async () => {
+    vi.stubGlobal(
+      "fetch",
+      routeFetch({
+        "GET /api/watchlist": () =>
+          jsonResponse({ tickers: [makeWatchlistEntry("AAPL"), makeWatchlistEntry("NVDA")] }),
+      }),
+    );
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await user.click(await screen.findByTestId(testIds.watchlistRow("NVDA")));
+
+    expect(screen.getByTestId(testIds.mainChart)).toHaveAttribute("data-ticker", "NVDA");
+    expect(screen.getByTestId(testIds.tradeTicker)).toHaveValue("NVDA");
+    expect(screen.getByTestId(testIds.mainChart)).toHaveTextContent("NVDA");
   });
 
   it("still renders the header figures", () => {

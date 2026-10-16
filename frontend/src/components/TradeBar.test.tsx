@@ -24,7 +24,7 @@ function setup(fetchMock: FetchMock = vi.fn(async () => jsonResponse(FILLED))) {
   vi.stubGlobal("fetch", fetchMock);
   const onFilled = vi.fn();
   const user = userEvent.setup();
-  render(<TradeBar onFilled={onFilled} />);
+  render(<TradeBar selectedTicker={null} onFilled={onFilled} />);
   return { fetchMock, onFilled, user };
 }
 
