@@ -62,7 +62,7 @@ Plans:
   4. Removing a ticker and adding it back keeps its original session open price, so its daily change % does not reset.
   5. The backend pytest suite passes, with a new test that reproduces each fix, and the snapshot and chat history queries are backed by per-user, time-ordered indexes.
 
-**Plans**: 5/5 plans executed
+**Plans**: 5/6 plans executed (1 gap-closure plan pending)
 
 Plans:
 **Wave 1**
@@ -73,6 +73,9 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [x] 02-05-PLAN.md — Cap of 5 trades and 5 watchlist changes per reply with skipped actions recorded; prompt states the cap; full-suite INT-04 gate (HARD-06, INT-04)
+
+**Wave 3** *(gap closure, blocked on Wave 2 completion)*
+- [ ] 02-06-PLAN.md — Gap G-02-1 (CR-01): reject non-finite LLM trade quantities at the ChatReply schema so POST /api/chat returns 502, never 500, and stores nothing (HARD-01, HARD-05, INT-04)
 
 **UI hint**: no
 
