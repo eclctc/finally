@@ -6,6 +6,11 @@
 const noNegativeZero = (n: number) => (Math.abs(n) < 0.005 ? 0 : n);
 
 const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+const signedCurrency = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  signDisplay: "exceptZero",
+});
 const decimal2 = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const quantity = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
 const percent = new Intl.NumberFormat("en-US", {
@@ -16,6 +21,8 @@ const percent = new Intl.NumberFormat("en-US", {
 });
 
 export const formatCurrency = (n: number) => currency.format(noNegativeZero(n));
+/** Dollar P&L with an explicit "+" on gains: "+$12.34", "-$12.34", "$0.00". */
+export const formatSignedCurrency = (n: number) => signedCurrency.format(noNegativeZero(n));
 export const formatPrice = (n: number) => decimal2.format(noNegativeZero(n));
 export const formatQuantity = (n: number) => quantity.format(n);
 /** Input is a fraction: 0.0123 means 1.23%. */

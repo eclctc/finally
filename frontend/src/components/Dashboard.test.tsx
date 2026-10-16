@@ -191,4 +191,37 @@ describe("Dashboard", () => {
     expect(post[1]!.headers).toMatchObject({ "Content-Type": "application/json" });
     expect(fetchMock.mock.calls.filter(([path]) => path === "/api/portfolio")).toHaveLength(1);
   });
+
+  it("a Buy adds a position row and a full Sell removes it", async () => {
+    const responses = [
+      makeTradeResponse(
+        { ticker: "MSFT", side: "buy", quantity: 2, price: 410 },
+        makePortfolio(9180, [makePosition("MSFT", 2, 410, 410)]),
+      ),
+      makeTradeResponse({ ticker: "MSFT", side: "sell", quantity: 2, price: 410 }, makePortfolio(10000)),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      routeFetch({
+        "GET /api/portfolio": () => jsonResponse(makePortfolio(10000)),
+        "POST /api/portfolio/trade": () => jsonResponse(responses.shift()),
+      }),
+    );
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance)).toHaveTextContent("$10,000.00"));
+
+    await user.type(screen.getByTestId(testIds.tradeTicker), "MSFT");
+    await user.type(screen.getByTestId(testIds.tradeQuantity), "2");
+    await user.click(screen.getByTestId(testIds.tradeBuy));
+
+    const row = await screen.findByTestId(testIds.positionRow("MSFT"));
+    expect(row).toHaveTextContent("MSFT");
+    expect(row).toHaveTextContent("2");
+    expect(screen.getByTestId(testIds.positionsTable)).toHaveTextContent("MSFT");
+
+    await user.type(screen.getByTestId(testIds.tradeQuantity), "2");
+    await user.click(screen.getByTestId(testIds.tradeSell));
+    await waitFor(() => expect(screen.queryByTestId(testIds.positionRow("MSFT"))).not.toBeInTheDocument());
+  });
 });
