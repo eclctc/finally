@@ -38,9 +38,12 @@ def is_watched(conn: sqlite3.Connection, ticker: str, user_id: str = DEFAULT_USE
 
 
 def insert_watchlist_row(conn: sqlite3.Connection, ticker: str, user_id: str = DEFAULT_USER) -> None:
-    """Add a ticker to the watchlist. Raises IntegrityError if already present."""
+    """Add a ticker to the watchlist; a ticker already watched is left unchanged."""
     conn.execute(
-        "INSERT INTO watchlist (id, user_id, ticker, added_at) VALUES (?, ?, ?, ?)",
+        """
+        INSERT INTO watchlist (id, user_id, ticker, added_at) VALUES (?, ?, ?, ?)
+        ON CONFLICT (user_id, ticker) DO NOTHING
+        """,
         (new_id(), user_id, ticker, now_iso()),
     )
 
