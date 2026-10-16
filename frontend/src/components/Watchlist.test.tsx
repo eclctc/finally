@@ -1,7 +1,8 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Watchlist } from "@/components/Watchlist";
-import { mergeFrame } from "@/lib/priceStore";
+import { EMPTY_HISTORY, getEntry, getHistory, mergeFrame } from "@/lib/priceStore";
 import { testIds } from "@/lib/testIds";
 import { jsonResponse, makeFrame, makeFrameEntry, makeWatchlistEntry } from "@/test/fixtures";
 
@@ -157,5 +158,306 @@ describe("Watchlist daily change", () => {
     streamTick("AAPL", 100, 100);
     expect(changeCell("AAPL")).toHaveTextContent(/^0\.00%$/);
     expect(changeCell("AAPL")).toHaveClass("text-muted");
+  });
+});
+
+type WatchlistEntry = ReturnType<typeof makeWatchlistEntry>;
+type PostHandler = (ticker: string) => Promise<Response>;
+
+const POST_INIT = (ticker: string) => ({
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ ticker }),
+});
+
+/**
+ * Fetch stub: GET /api/watchlist serves the mutable list; POST and DELETE run their handlers
+ * (defaults: add the ticker, drop the ticker).
+ */
+const stubApi = (list: WatchlistEntry[], onPost?: PostHandler, onDelete?: PostHandler) => {
+  const addToList: PostHandler = (ticker) => {
+    list.push(makeWatchlistEntry(ticker));
+    return Promise.resolve(jsonResponse({ ticker }));
+  };
+  const dropFromList: PostHandler = (ticker) => {
+    list.splice(list.findIndex((entry) => entry.ticker === ticker), 1);
+    return Promise.resolve(jsonResponse({ ticker }));
+  };
+  const fetchMock = vi.fn((path: string, init?: RequestInit) => {
+    if (init?.method === "POST") return (onPost ?? addToList)(JSON.parse(init.body as string).ticker);
+    if (init?.method === "DELETE") return (onDelete ?? dropFromList)(decodeURIComponent(path.split("/").pop()!));
+    return Promise.resolve(jsonResponse({ tickers: list }));
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+};
+
+const postCalls = (fetchMock: ReturnType<typeof stubApi>) =>
+  fetchMock.mock.calls.filter(([, init]) => init?.method === "POST");
+
+const addInput = () => screen.getByTestId(testIds.watchlistAddInput) as HTMLInputElement;
+const addButton = () => screen.getByTestId(testIds.watchlistAddButton);
+const scrollMock = () => window.HTMLElement.prototype.scrollIntoView as ReturnType<typeof vi.fn>;
+
+describe("Watchlist add form", () => {
+  it("uppercases typed text, posts the trimmed ticker and shows the new row", async () => {
+    const fetchMock = stubApi([makeWatchlistEntry("AAPL")]);
+    render(<Watchlist />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    scrollMock().mockClear();
+    const user = userEvent.setup();
+    await user.type(addInput(), " dis ");
+    expect(addInput()).toHaveValue(" DIS ");
+    await user.click(addButton());
+    const row = await screen.findByTestId(testIds.watchlistRow("DIS"));
+    expect(fetchMock).toHaveBeenCalledWith("/api/watchlist", POST_INIT("DIS"));
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/watchlist", undefined);
+    expect(addInput()).toHaveValue("");
+    expect(addInput()).toHaveFocus();
+    expect(scrollMock()).toHaveBeenCalledWith({ block: "nearest" });
+    expect(scrollMock().mock.contexts).toEqual([row]);
+  });
+
+  it("submits on Enter the same way", async () => {
+    const fetchMock = stubApi([makeWatchlistEntry("AAPL")]);
+    render(<Watchlist />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    const user = userEvent.setup();
+    await user.type(addInput(), "dis{Enter}");
+    await screen.findByTestId(testIds.watchlistRow("DIS"));
+    expect(postCalls(fetchMock)).toEqual([["/api/watchlist", POST_INIT("DIS")]]);
+  });
+
+  it("scrolls once per add, not on later list reloads", async () => {
+    stubApi([makeWatchlistEntry("AAPL")]);
+    render(<Watchlist />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    scrollMock().mockClear();
+    const user = userEvent.setup();
+    await user.type(addInput(), "dis{Enter}");
+    const dis = await screen.findByTestId(testIds.watchlistRow("DIS"));
+    await user.type(addInput(), "v{Enter}");
+    const v = await screen.findByTestId(testIds.watchlistRow("V"));
+    expect(scrollMock().mock.contexts).toEqual([dis, v]);
+  });
+
+  it("disables Add for whitespace-only input and sends nothing on Enter", async () => {
+    const fetchMock = stubApi([makeWatchlistEntry("AAPL")]);
+    render(<Watchlist />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    const user = userEvent.setup();
+    expect(addButton()).toBeDisabled();
+    await user.type(addInput(), "   {Enter}");
+    expect(addButton()).toBeDisabled();
+    expect(postCalls(fetchMock)).toHaveLength(0);
+  });
+
+  it("keeps Add disabled and labelled Add while a POST is pending, and sends one POST", async () => {
+    const fetchMock = stubApi([makeWatchlistEntry("AAPL")], () => new Promise(() => {}));
+    render(<Watchlist />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    const user = userEvent.setup();
+    await user.type(addInput(), "dis{Enter}");
+    await user.keyboard("{Enter}");
+    expect(addButton()).toBeDisabled();
+    expect(addButton()).toHaveTextContent(/^Add$/);
+    expect(addButton()).toHaveClass("disabled:opacity-50", "disabled:cursor-not-allowed");
+    expect(postCalls(fetchMock)).toHaveLength(1);
+  });
+
+  it("shows a 400 error inline, keeps the text and flags the input until the next keystroke", async () => {
+    stubApi([makeWatchlistEntry("AAPL")], () =>
+      Promise.resolve(jsonResponse({ error: "Invalid ticker: 'TOOLONGX'" }, 400)),
+    );
+    render(<Watchlist />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    const user = userEvent.setup();
+    await user.type(addInput(), "toolongx{Enter}");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Invalid ticker: 'TOOLONGX'");
+    expect(alert).toHaveClass("break-words", "text-down");
+    expect(addInput()).toHaveValue("TOOLONGX");
+    expect(addInput()).toHaveAttribute("aria-invalid", "true");
+    expect(addInput()).toHaveAttribute("aria-describedby", alert.id);
+    expect(addInput()).toHaveClass("border-down");
+    expect(addInput()).toHaveFocus();
+    await user.type(addInput(), "Y");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(addInput()).not.toHaveAttribute("aria-invalid");
+    expect(addInput()).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("renders a hostile error body as literal text, never as markup", async () => {
+    const payload = "<img src=x onerror=alert(1)>";
+    stubApi([makeWatchlistEntry("AAPL")], () => Promise.resolve(jsonResponse({ error: payload }, 400)));
+    const { container } = render(<Watchlist />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    const user = userEvent.setup();
+    await user.type(addInput(), "x{Enter}");
+    expect(await screen.findByRole("alert")).toHaveTextContent(payload);
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("shows the fixed network-failure copy when the POST rejects", async () => {
+    stubApi([makeWatchlistEntry("AAPL")], () => Promise.reject(new TypeError("Failed to fetch")));
+    render(<Watchlist />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    const user = userEvent.setup();
+    await user.type(addInput(), "dis{Enter}");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Request failed. Try again.");
+  });
+
+  it("keeps the form visible while loading, load-failed, empty and populated", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    const loading = render(<Watchlist />);
+    expect(addInput()).toBeInTheDocument();
+    loading.unmount();
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("down"))));
+    const failed = render(<Watchlist />);
+    await screen.findByRole("alert");
+    expect(addInput()).toBeInTheDocument();
+    failed.unmount();
+    stubWatchlist();
+    const empty = render(<Watchlist />);
+    await screen.findByText("Watchlist is empty");
+    expect(addInput()).toBeInTheDocument();
+    empty.unmount();
+    stubWatchlist(makeWatchlistEntry("AAPL"));
+    render(<Watchlist />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    expect(addInput()).toBeInTheDocument();
+  });
+
+  it("puts no length limit on the input so the backend validator decides", () => {
+    stubWatchlist();
+    render(<Watchlist />);
+    expect(addInput()).not.toHaveAttribute("maxlength");
+    expect(addInput()).toHaveAttribute("placeholder", "Ticker");
+    expect(addInput()).toHaveAttribute("aria-label", "Ticker to add");
+    expect(addButton()).toHaveClass("bg-submit");
+  });
+
+  it("keeps a streamed price and its history across the reload an add triggers", async () => {
+    const list = [makeWatchlistEntry("AAPL", 190)];
+    stubApi(list);
+    render(<Watchlist />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    streamTick("AAPL", 200, 190);
+    const historyLength = getHistory("AAPL").length;
+    const user = userEvent.setup();
+    await user.type(addInput(), "dis{Enter}");
+    await screen.findByTestId(testIds.watchlistRow("DIS"));
+    expect(priceCell("AAPL")).toHaveTextContent(/^200\.00$/);
+    expect(getHistory("AAPL")).toHaveLength(historyLength);
+  });
+});
+
+describe("Watchlist remove", () => {
+  const removeButton = (ticker: string) => screen.getByTestId(testIds.watchlistRemove(ticker));
+
+  const watchApiList = async (
+    onDelete?: PostHandler,
+    list = [makeWatchlistEntry("AAPL", 190), makeWatchlistEntry("MSFT", 410)],
+  ) => {
+    const fetchMock = stubApi(list, undefined, onDelete);
+    render(<Watchlist />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    fetchMock.mockClear();
+    return fetchMock;
+  };
+
+  it("gives each row a labelled x button as its last cell", async () => {
+    await watchApiList();
+    const button = removeButton("AAPL");
+    expect(button).toHaveTextContent(/^×$/);
+    expect(button).toHaveAttribute("aria-label", "Remove AAPL");
+    expect(button).toHaveAttribute("title", "Remove AAPL");
+    expect(button).toHaveClass("size-6", "text-muted", "hover:text-down");
+  });
+
+  it("deletes, reloads, then drops the row, its store entry and history, and focuses the input", async () => {
+    const fetchMock = await watchApiList();
+    streamTick("AAPL", 191, 190);
+    await userEvent.setup().click(removeButton("AAPL"));
+    await waitFor(() => expect(screen.queryByTestId(testIds.watchlistRow("AAPL"))).toBeNull());
+    expect(fetchMock.mock.calls).toEqual([
+      ["/api/watchlist/AAPL", { method: "DELETE" }],
+      ["/api/watchlist", undefined],
+    ]);
+    expect(screen.getByTestId(testIds.watchlistRow("MSFT"))).toBeInTheDocument();
+    expect(getEntry("AAPL")).toBeUndefined();
+    expect(getHistory("AAPL")).toBe(EMPTY_HISTORY);
+    expect(addInput()).toHaveFocus();
+  });
+
+  it("disables the x with opacity while its DELETE is pending and sends one DELETE", async () => {
+    const fetchMock = await watchApiList(() => new Promise(() => {}));
+    const user = userEvent.setup();
+    await user.click(removeButton("AAPL"));
+    await user.click(removeButton("AAPL"));
+    expect(removeButton("AAPL")).toBeDisabled();
+    expect(removeButton("AAPL")).toHaveClass("disabled:opacity-50");
+    expect(removeButton("MSFT")).toBeEnabled();
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "DELETE")).toHaveLength(1);
+  });
+
+  it("treats a 404 as already removed: no alert, and the reload drops the row", async () => {
+    const list = [makeWatchlistEntry("AAPL", 190), makeWatchlistEntry("MSFT", 410)];
+    await watchApiList((ticker) => {
+      list.splice(list.findIndex((entry) => entry.ticker === ticker), 1);
+      return Promise.resolve(jsonResponse({ error: `${ticker} is not on the watchlist` }, 404));
+    }, list);
+    await userEvent.setup().click(removeButton("AAPL"));
+    await waitFor(() => expect(screen.queryByTestId(testIds.watchlistRow("AAPL"))).toBeNull());
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(getEntry("AAPL")).toBeUndefined();
+  });
+
+  it("shows another failure in the add-error slot and keeps the row", async () => {
+    await watchApiList(() => Promise.resolve(jsonResponse({ error: "Market data unavailable, try again" }, 500)));
+    await userEvent.setup().click(removeButton("AAPL"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Market data unavailable, try again");
+    expect(screen.getByTestId(testIds.watchlistRow("AAPL"))).toBeInTheDocument();
+    expect(removeButton("AAPL")).toBeEnabled();
+  });
+
+  it("shows the network-failure copy when the DELETE rejects", async () => {
+    await watchApiList(() => Promise.reject(new TypeError("Failed to fetch")));
+    await userEvent.setup().click(removeButton("AAPL"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Request failed. Try again.");
+  });
+
+  it("encodes the ticker in the DELETE path", async () => {
+    const fetchMock = await watchApiList(undefined, [
+      makeWatchlistEntry("AAPL", 190),
+      makeWatchlistEntry("A/B", 10),
+    ]);
+    await userEvent.setup().click(removeButton("A/B"));
+    await waitFor(() => expect(screen.queryByTestId(testIds.watchlistRow("A/B"))).toBeNull());
+    expect(fetchMock.mock.calls[0]).toEqual(["/api/watchlist/A%2FB", { method: "DELETE" }]);
+  });
+
+  it("does not scroll again after a remove reloads the list", async () => {
+    await watchApiList();
+    const user = userEvent.setup();
+    await user.type(addInput(), "dis{Enter}");
+    await screen.findByTestId(testIds.watchlistRow("DIS"));
+    scrollMock().mockClear();
+    await user.click(removeButton("MSFT"));
+    await waitFor(() => expect(screen.queryByTestId(testIds.watchlistRow("MSFT"))).toBeNull());
+    expect(scrollMock()).not.toHaveBeenCalled();
+  });
+
+  it("orders the row cells ticker, price, change, sparkline, remove", async () => {
+    await watchApiList();
+    streamTick("AAPL", 195, 190);
+    const cells = [...screen.getByTestId(testIds.watchlistRow("AAPL")).children];
+    expect(cells).toHaveLength(5);
+    expect(cells[0]).toHaveTextContent(/^AAPL$/);
+    expect(cells[1]).toBe(priceCell("AAPL"));
+    expect(cells[1]).toHaveAttribute("data-flash", "up");
+    expect(cells[2]).toBe(changeCell("AAPL"));
+    expect(cells[3]).toHaveAttribute("title", "Since page load");
+    expect(cells[4]).toBe(removeButton("AAPL"));
   });
 });
