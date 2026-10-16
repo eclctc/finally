@@ -32,12 +32,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `npm test` runs the Vitest + RTL harness green, and a component that uses `ResizeObserver`, `EventSource` or `scrollIntoView` renders under jsdom.
   4. `next dev` serves the shell with `/api/*` proxied to the backend on `:8000`, and SSE frames from `/api/stream/prices` arrive unbuffered.
   5. The theme colors (`#0d1117`/`#1a1a2e`, muted borders, `#ecad0a`, `#209dd7`, `#753991`) are usable as Tailwind tokens, and every E2E testid and number formatter comes from one shared module.
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Package legitimacy check, then tracer: Next 16 static export with theme tokens built by the existing Dockerfile and served at :8000; dev proxy with 40 s SSE check
+- [ ] 01-01-PLAN.md — Package legitimacy check, then tracer: Next 16 static export with theme tokens built by the existing Dockerfile and served at :8000
 - [ ] 01-02-PLAN.md — Vitest + RTL harness with ResizeObserver/EventSource/scrollIntoView stubs; testIds module with spec parity; bare-number formatters and fetch wrapper
 - [ ] 01-03-PLAN.md — Header reads real cash/total from /api/portfolio; terminal layout panels; rebuilt container serves the real-data shell
+- [ ] 01-04-PLAN.md — Dev loop: next dev proxies /api to :8000 with a 40 s unbuffered SSE check; README dev and build commands (wave 2, alongside 01-02)
 **UI hint**: yes
 
 ### Phase 2: Backend Hardening

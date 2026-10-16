@@ -514,17 +514,20 @@ A throwaway component defined inside the test file (not shipped) that, in a `use
 | A4 | Non-required palette values (`line`, `text`, `muted`, `up`, `down`) are acceptable | Code Examples | Low: UI-SPEC may retune; no code depends on hex values |
 | A5 | The `FakeEventSource` helper surface (`open/emit/fail`) is what Phase 3 tests need | vitest.setup.ts | Low: extend in Phase 3 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does the 40 s dev-proxy SSE hold work, or is `experimental.proxyTimeout` needed?**
    - Known: 4 s of unbuffered frames was measured earlier with `compress: false`.
    - Unclear: behavior past ~30 s (unconfirmed in official docs).
    - Recommendation: include the 40 s `curl -N` check in FND-06 verification; add the option only if it fails.
+   - **RESOLVED:** adopted. Plan 01-04 Task 1 runs the 40 s `curl -N` check through `next dev` and passes only when curl's own `--max-time` ends the stream (exit 28) after at least 60 frames. `experimental: { proxyTimeout: 3600000 }` is added to the dev-only config only if that check fails and the `next dev` log proves the proxy closed the request.
 2. **Should the skeleton's Header show `--` or `0.00` while loading?**
    - Known: all specs use `expect.poll`, so either works.
    - Recommendation: `--` for Phase 1; Phase 3 revisits (FEATURES.md notes placeholders are safest outside the testid element).
+   - **RESOLVED:** `--`. Plan 01-03 Task 1 renders exactly `--` in `cash-balance` and `total-value` until `/api/portfolio` answers, and its Header test asserts that text. Phase 3 owns the final loading UX.
 3. **Should placeholder panels carry final testids (`watchlist`, `chat-panel`, ...)?**
    - Recommendation: yes for wrappers that need no children (`watchlist`, `positions-table`, `heatmap`, `pnl-chart`, `chat-panel`) is harmless and shows the shell layout; but do NOT add `watchlist-row-*` or `main-chart` until their phases. Planner/UI-SPEC discretion.
+   - **RESOLVED:** yes for the five wrappers only. Plan 01-03 Task 2 sets `watchlist`, `heatmap`, `pnl-chart`, `positions-table` and `chat-panel` from `testIds`, and its Dashboard test asserts that no `watchlist-row-*` id and no `main-chart` id exist.
 
 ## Environment Availability
 
