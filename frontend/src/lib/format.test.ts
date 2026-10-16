@@ -9,9 +9,11 @@ describe("formatCurrency", () => {
     expect(parseNumber(formatCurrency(10000))).toBe(10000);
   });
 
-  it("rounds to cents with ties toward positive infinity", () => {
+  it("rounds half away from zero, as Intl does", () => {
     expect(formatCurrency(0.004)).toBe("$0.00");
     expect(formatCurrency(0.005)).toBe("$0.01");
+    expect(formatCurrency(1.005)).toBe("$1.01");
+    expect(formatCurrency(-0.005)).toBe("-$0.01");
     expect(formatCurrency(1234.567)).toBe("$1,234.57");
   });
 
@@ -41,6 +43,11 @@ describe("formatPrice", () => {
   it("renders two decimals without a currency symbol", () => {
     expect(formatPrice(190.5)).toBe("190.50");
     expect(formatPrice(1234.567)).toBe("1,234.57");
+  });
+
+  it("rounds once, as Intl does, and never shows a signed zero", () => {
+    expect(formatPrice(1.005)).toBe("1.01");
+    expect(formatPrice(-0.004)).toBe("0.00");
   });
 });
 
