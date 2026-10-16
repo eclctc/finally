@@ -11,7 +11,7 @@ const perTickerHelpers = [
   testIds.positionRow,
 ];
 
-const staticIds = Object.values(testIds).filter((value): value is string => typeof value === "string");
+const staticIds = Object.values(testIds).filter((value) => typeof value === "string") as string[];
 const helperPrefixes = perTickerHelpers.map((helper) => helper(""));
 const knownIds = new Set([...staticIds, ...helperPrefixes]);
 
