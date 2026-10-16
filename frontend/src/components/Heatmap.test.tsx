@@ -1,7 +1,8 @@
-import { render } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Heatmap } from "@/components/Heatmap";
-import { makePortfolio, makePosition } from "@/test/fixtures";
+import { Heatmap, tileFill } from "@/components/Heatmap";
+import { mergeFrame } from "@/lib/priceStore";
+import { makeFrame, makeFrameEntry, makePortfolio, makePosition } from "@/test/fixtures";
 
 const twoPositions = () =>
   makePortfolio(5000, [makePosition("JPM", 10, 200, 210), makePosition("AAPL", 5, 200, 190)]);
@@ -42,5 +43,98 @@ describe("Heatmap Treemap spike", () => {
   it("emits no clip-path element", () => {
     const { container } = render(<Heatmap portfolio={twoPositions()} failed={false} />);
     expect(container.querySelector("clipPath, defs")).toBeNull();
+  });
+});
+
+const tileTitle = (container: HTMLElement, ticker: string) =>
+  tileRect(container, ticker).parentElement?.querySelector("title")?.textContent;
+
+describe("Heatmap states", () => {
+  it("shows the loading line and no svg before the first load", () => {
+    const { container } = render(<Heatmap portfolio={null} failed={false} />);
+    expect(screen.getByText("Loading positions...")).toHaveClass("text-muted");
+    expect(container.querySelector("svg")).toBeNull();
+  });
+
+  it("shows an alert when the first load failed", () => {
+    render(<Heatmap portfolio={null} failed />);
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Positions unavailable. Reload the page to try again.");
+    expect(alert).toHaveClass("text-down");
+  });
+
+  it("shows the empty state with no svg for zero positions", () => {
+    const { container } = render(<Heatmap portfolio={makePortfolio(10000)} failed={false} />);
+    expect(screen.getByText("No positions to chart yet.")).toHaveClass("py-12", "text-center", "text-muted");
+    expect(container.querySelector("svg")).toBeNull();
+  });
+
+  it("fills the whole well with one tile for one position", () => {
+    const { container } = render(
+      <Heatmap portfolio={makePortfolio(5000, [makePosition("JPM", 10, 200, 210)])} failed={false} />,
+    );
+    const rects = container.querySelectorAll("svg rect");
+    expect(rects).toHaveLength(1);
+    expect(rects[0]).toHaveAttribute("width", "800");
+    expect(rects[0]).toHaveAttribute("height", "400");
+  });
+
+  it("names the well as an image with the position count", () => {
+    render(<Heatmap portfolio={twoPositions()} failed={false} />);
+    expect(
+      screen.getByRole("img", {
+        name: "Portfolio heatmap, 2 positions, sized by market value, colored by profit or loss",
+      }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("Heatmap tiles", () => {
+  it("prints the percent label only on tiles of at least 64 x 40", () => {
+    const portfolio = makePortfolio(0, [makePosition("AAPL", 50, 200, 200), makePosition("JPM", 0.05, 200, 200)]);
+    const { container } = render(<Heatmap portfolio={portfolio} failed={false} />);
+    const textsIn = (ticker: string) => tileRect(container, ticker).parentElement?.querySelectorAll("text");
+    expect(textsIn("JPM")).toHaveLength(1);
+    expect(textsIn("AAPL")).toHaveLength(2);
+  });
+
+  it("reads ticker, market value and percent in the native tooltip", () => {
+    const { container } = render(<Heatmap portfolio={twoPositions()} failed={false} />);
+    expect(tileTitle(container, "JPM")).toBe("JPM  $2,100.00  +5.00%");
+  });
+
+  it("has no click or hover handlers on a tile", () => {
+    const { container } = render(<Heatmap portfolio={twoPositions()} failed={false} />);
+    const tile = tileRect(container, "JPM").parentElement!;
+    expect(tile.onclick).toBeNull();
+    expect(tile.onmouseenter).toBeNull();
+  });
+
+  it("re-values a tile from the live store price", () => {
+    const { container } = render(<Heatmap portfolio={twoPositions()} failed={false} />);
+    act(() => mergeFrame(makeFrame(makeFrameEntry("JPM", 220, 2))));
+    expect(tileTitle(container, "JPM")).toBe("JPM  $2,200.00  +10.00%");
+  });
+
+  it("orders tiles by ticker ascending", () => {
+    const { container } = render(<Heatmap portfolio={twoPositions()} failed={false} />);
+    const titles = Array.from(container.querySelectorAll("title")).map((t) => t.textContent?.split(" ")[0]);
+    expect(titles.filter((t) => t === "AAPL" || t === "JPM")).toEqual(["AAPL", "JPM"]);
+  });
+});
+
+describe("tileFill", () => {
+  it("is the line color at zero P&L", () => {
+    expect(tileFill(0)).toBe("var(--color-line)");
+  });
+
+  it("caps a gain at 40% from +5%", () => {
+    const capped = "color-mix(in srgb, var(--color-up) 40%, var(--color-line))";
+    expect(tileFill(0.05)).toBe(capped);
+    expect(tileFill(0.1)).toBe(capped);
+  });
+
+  it("scales a loss linearly below the cap", () => {
+    expect(tileFill(-0.025)).toBe("color-mix(in srgb, var(--color-down) 20%, var(--color-line))");
   });
 });

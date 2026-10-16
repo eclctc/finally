@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { liveTotalValue, type Portfolio, type PortfolioPosition } from "@/lib/portfolioValue";
+import { livePosition, liveTotalValue, type Portfolio, type PortfolioPosition } from "@/lib/portfolioValue";
 
 const position = (ticker: string, quantity: number, currentPrice: number): PortfolioPosition => ({
   ticker,
@@ -40,5 +40,25 @@ describe("liveTotalValue", () => {
     const held = portfolio(0, position("AAPL", 2, 100), position("MSFT", 3, 50));
     const live = (ticker: string) => (ticker === "AAPL" ? 110 : undefined);
     expect(liveTotalValue(held, live)).toBe(2 * 110 + 3 * 50);
+  });
+});
+
+describe("livePosition", () => {
+  it("values the position at the live price when given", () => {
+    expect(livePosition(position("AAPL", 10, 120), 110)).toEqual({
+      price: 110,
+      marketValue: 1100,
+      pnl: 100,
+      pnlFraction: 0.1,
+    });
+  });
+
+  it("falls back to the API current price without a live price", () => {
+    expect(livePosition(position("AAPL", 10, 90), undefined)).toEqual({
+      price: 90,
+      marketValue: 900,
+      pnl: -100,
+      pnlFraction: -0.1,
+    });
   });
 });

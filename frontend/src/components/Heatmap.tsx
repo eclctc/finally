@@ -55,10 +55,19 @@ function renderTile(props: TreemapNode) {
 /** Portfolio treemap: one tile per position, sized by live market value, colored by P&L. */
 export function Heatmap({ portfolio, failed }: { portfolio: Portfolio | null; failed: boolean }) {
   usePriceVersion();
-  if (portfolio === null && !failed) {
-    return <p className="px-2 py-2 text-muted">Loading positions...</p>;
+  if (portfolio === null) {
+    return failed ? (
+      <p role="alert" className="break-words px-2 py-2 text-down">
+        Positions unavailable. Reload the page to try again.
+      </p>
+    ) : (
+      <p className="px-2 py-2 text-muted">Loading positions...</p>
+    );
   }
-  const data = [...(portfolio?.positions ?? [])]
+  if (portfolio.positions.length === 0) {
+    return <p className="py-12 text-center text-muted">No positions to chart yet.</p>;
+  }
+  const data = [...portfolio.positions]
     .sort((a, b) => a.ticker.localeCompare(b.ticker))
     .map((position) => {
       const { marketValue, pnlFraction } = livePosition(position, getEntry(position.ticker)?.price);
@@ -66,7 +75,11 @@ export function Heatmap({ portfolio, failed }: { portfolio: Portfolio | null; fa
     });
 
   return (
-    <div className="relative h-full min-h-0 overflow-hidden">
+    <div
+      role="img"
+      aria-label={`Portfolio heatmap, ${data.length} positions, sized by market value, colored by profit or loss`}
+      className="relative h-full min-h-0 overflow-hidden"
+    >
       <ResponsiveContainer width="100%" height="100%">
         <Treemap data={data} dataKey="value" nameKey="name" isAnimationActive={false} content={renderTile} />
       </ResponsiveContainer>
