@@ -27,8 +27,13 @@ const changeCell = (ticker: string) =>
 
 const priceCell = (ticker: string) => screen.getByTestId(testIds.watchlistPrice(ticker));
 
-const streamTick = (ticker: string, price: number, openPrice: number) =>
+/** Flushes the freshly committed rows' store subscriptions, then streams one tick. */
+const settleSubscriptions = () => act(async () => {});
+
+const streamTick = async (ticker: string, price: number, openPrice: number) => {
+  await settleSubscriptions();
   act(() => mergeFrame(makeFrame(makeFrameEntry(ticker, price, 2, openPrice))));
+};
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -92,7 +97,7 @@ describe("Watchlist rows", () => {
     stubWatchlist(makeWatchlistEntry("MSFT"), makeWatchlistEntry("AAPL"), makeWatchlistEntry("V"));
     const { container } = renderWatchlist();
     await screen.findByTestId(testIds.watchlistRow("MSFT"));
-    streamTick("TSLA", 250, 240);
+    await streamTick("TSLA", 250, 240);
     expect(screen.queryByTestId(testIds.watchlistRow("TSLA"))).toBeNull();
     expect(rows(container)).toHaveLength(3);
   });
@@ -117,7 +122,7 @@ describe("Watchlist rows", () => {
     stubWatchlist(makeWatchlistEntry("AAPL", 190.5), makeWatchlistEntry("MSFT", 410));
     renderWatchlist();
     await screen.findByTestId(testIds.watchlistRow("AAPL"));
-    streamTick("AAPL", 191, 190);
+    await streamTick("AAPL", 191, 190);
     expect(priceCell("AAPL")).toHaveTextContent(/^191\.00$/);
     expect(priceCell("MSFT")).toHaveTextContent(/^410\.00$/);
   });
@@ -140,6 +145,7 @@ describe("Watchlist daily change", () => {
 
   it("computes (price - open) / open on raw values, ignoring the per-tick change_percent", async () => {
     await watchAapl();
+    await settleSubscriptions();
     act(() =>
       mergeFrame(makeFrame({ ...makeFrameEntry("AAPL", 110, 2, 100), change_percent: 0.5 })),
     );
@@ -150,21 +156,21 @@ describe("Watchlist daily change", () => {
 
   it("shows a negative change one cent below the open in text-down", async () => {
     await watchAapl();
-    streamTick("AAPL", 99.99, 100);
+    await streamTick("AAPL", 99.99, 100);
     expect(changeCell("AAPL").textContent).toMatch(/^-/);
     expect(changeCell("AAPL")).toHaveClass("text-down");
   });
 
   it("shows a positive change one cent above the open in text-up", async () => {
     await watchAapl();
-    streamTick("AAPL", 100.01, 100);
+    await streamTick("AAPL", 100.01, 100);
     expect(changeCell("AAPL").textContent).toMatch(/^\+/);
     expect(changeCell("AAPL")).toHaveClass("text-up");
   });
 
   it("shows 0.00% in text-muted when the price equals the open", async () => {
     await watchAapl();
-    streamTick("AAPL", 100, 100);
+    await streamTick("AAPL", 100, 100);
     expect(changeCell("AAPL")).toHaveTextContent(/^0\.00%$/);
     expect(changeCell("AAPL")).toHaveClass("text-muted");
   });
@@ -351,7 +357,7 @@ describe("Watchlist add form", () => {
     stubApi(list);
     renderWatchlist();
     await screen.findByTestId(testIds.watchlistRow("AAPL"));
-    streamTick("AAPL", 200, 190);
+    await streamTick("AAPL", 200, 190);
     const historyLength = getSeries("AAPL").length;
     const user = userEvent.setup();
     await user.type(addInput(), "dis{Enter}");
@@ -386,7 +392,7 @@ describe("Watchlist remove", () => {
 
   it("deletes, reloads, then drops the row, its store entry and history, and focuses the input", async () => {
     const fetchMock = await watchApiList();
-    streamTick("AAPL", 191, 190);
+    await streamTick("AAPL", 191, 190);
     await userEvent.setup().click(removeButton("AAPL"));
     await waitFor(() => expect(screen.queryByTestId(testIds.watchlistRow("AAPL"))).toBeNull());
     expect(fetchMock.mock.calls).toEqual([
@@ -459,7 +465,7 @@ describe("Watchlist remove", () => {
 
   it("orders the row cells ticker, price, change, sparkline, remove", async () => {
     await watchApiList();
-    streamTick("AAPL", 195, 190);
+    await streamTick("AAPL", 195, 190);
     const cells = [...screen.getByTestId(testIds.watchlistRow("AAPL")).children];
     expect(cells).toHaveLength(5);
     expect(cells[0]).toHaveTextContent(/^AAPL$/);
@@ -545,7 +551,7 @@ describe("Watchlist selection", () => {
 
   it("shows a change of +0.004% as 0.00% in text-muted", async () => {
     await watch("AAPL");
-    streamTick("AAPL", 190.0076, 190);
+    await streamTick("AAPL", 190.0076, 190);
     expect(changeCell("AAPL")).toHaveTextContent(/^0\.00%$/);
     expect(changeCell("AAPL")).toHaveClass("text-muted");
   });

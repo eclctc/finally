@@ -142,6 +142,7 @@ describe("Dashboard", () => {
     expect(Fake.instances[0].url).toBe("/api/stream/prices");
 
     const stream = Fake.instances[0];
+    await act(async () => {});
     act(() => {
       stream.open();
       stream.emit({
