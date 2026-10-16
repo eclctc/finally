@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { request } from "@/lib/api";
+import { ConnectionDot } from "@/components/ConnectionDot";
 import { formatCurrency } from "@/lib/format";
+import { liveTotalValue } from "@/lib/portfolioValue";
+import { getEntry } from "@/lib/priceStore";
 import { testIds } from "@/lib/testIds";
-
-interface PortfolioSummary {
-  cash_balance: number;
-  total_value: number;
-}
+import { usePortfolio } from "@/lib/usePortfolio";
+import { usePriceVersion } from "@/lib/usePrice";
 
 const show = (n?: number) => (n === undefined ? "--" : formatCurrency(n));
 
@@ -21,22 +19,17 @@ function Figure({ label, children }: { label: string; children: React.ReactNode 
   );
 }
 
-/** Top bar: brand, portfolio value and cash from the backend, and stream status. */
+/** Top bar: brand, live portfolio value, cash from the backend, and stream status. */
 export function Header() {
-  const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    request<PortfolioSummary>("/api/portfolio")
-      .then(setPortfolio)
-      .catch(() => setFailed(true));
-  }, []);
+  const { portfolio, failed } = usePortfolio();
+  usePriceVersion();
+  const total = portfolio ? liveTotalValue(portfolio, (ticker) => getEntry(ticker)?.price) : undefined;
 
   return (
     <header className="flex h-14 shrink-0 items-center border-b border-line bg-panel px-4">
-      <span className="text-lg font-semibold leading-tight text-text">
+      <h1 className="text-lg font-semibold leading-tight text-text">
         Fin<span className="text-accent">Ally</span>
-      </span>
+      </h1>
       <div className="ml-auto flex items-center gap-8">
         {failed && (
           <span role="alert" className="shrink-0 whitespace-nowrap text-[11px] text-down">
@@ -45,7 +38,7 @@ export function Header() {
         )}
         <Figure label="Portfolio value">
           <span data-testid={testIds.totalValue} className="figures whitespace-nowrap text-xl leading-tight text-accent">
-            {show(portfolio?.total_value)}
+            {show(total)}
           </span>
         </Figure>
         <Figure label="Cash">
@@ -53,13 +46,7 @@ export function Header() {
             {show(portfolio?.cash_balance)}
           </span>
         </Figure>
-        <span
-          data-testid={testIds.connectionStatus}
-          data-status="disconnected"
-          title="Disconnected"
-          aria-label="Disconnected"
-          className="size-2.5 shrink-0 rounded-full bg-down"
-        />
+        <ConnectionDot />
       </div>
     </header>
   );
