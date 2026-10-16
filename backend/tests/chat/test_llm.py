@@ -43,6 +43,10 @@ def test_parse_empty_arrays():
         '{"message": "Hi"}',
         '{"message": "Hi", "trades": [{"ticker": "AAPL", "side": "hold", "quantity": 1}], "watchlist_changes": []}',
         '{"message": "Hi", "trades": [], "watchlist_changes": [{"ticker": "AAPL", "action": "watch"}]}',
+        '{"message": "Hi", "trades": [{"ticker": "AAPL", "side": "buy", "quantity": "inf"}], "watchlist_changes": []}',
+        '{"message": "Hi", "trades": [{"ticker": "AAPL", "side": "buy", "quantity": "nan"}], "watchlist_changes": []}',
+        '{"message": "Hi", "trades": [{"ticker": "AAPL", "side": "buy", "quantity": "-inf"}], "watchlist_changes": []}',
+        '{"message": "Hi", "trades": [{"ticker": "AAPL", "side": "buy", "quantity": null}], "watchlist_changes": []}',
     ],
 )
 def test_parse_malformed_raises(content):

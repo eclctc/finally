@@ -1,3 +1,5 @@
+import json
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -90,3 +92,64 @@ def test_bad_llm_replies_return_fixed_502(client, monkeypatch, behavior, expecte
     assert response.status_code == 502
     assert response.json() == {"error": getattr(llm, expected_constant)}
     assert client.get("/api/portfolio").json()["positions"] == []
+
+
+def reply_with_quantity(token: str) -> str:
+    """Build model content for a PYPL add plus an AAPL buy, with token as a raw JSON number."""
+    reply = {
+        "message": "Done.",
+        "trades": [{"ticker": "AAPL", "side": "buy", "quantity": "QUANTITY"}],
+        "watchlist_changes": [{"ticker": "PYPL", "action": "add"}],
+    }
+    return json.dumps(reply).replace('"QUANTITY"', token)
+
+
+@pytest.mark.parametrize(
+    "token",
+    ["NaN", "Infinity", "-Infinity", "1e999"],
+    ids=["nan", "inf", "neg-inf", "overflow"],
+)
+def test_non_finite_trade_quantity_returns_502(client, monkeypatch, token):
+    monkeypatch.setenv("LLM_MOCK", "false")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+
+    async def fake_completion(**kwargs):
+        return respond_with_content(reply_with_quantity(token))
+
+    monkeypatch.setattr("app.chat.llm.acompletion", fake_completion)
+    response = client.post("/api/chat", json={"message": "buy"})
+
+    assert response.status_code == 502
+    assert response.json() == {"error": llm.BAD_REPLY_ERROR}
+    portfolio = client.get("/api/portfolio").json()
+    assert portfolio["positions"] == []
+    assert portfolio["cash_balance"] == 10000.0
+    with get_connection() as conn:
+        assert repository.recent_chat_messages(conn) == []
+        assert repository.is_watched(conn, "PYPL") is False
+
+
+def test_largest_finite_quantity_fails_as_an_action(client, monkeypatch):
+    monkeypatch.setenv("LLM_MOCK", "false")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    largest = sys.float_info.max
+
+    async def fake_completion(**kwargs):
+        return respond_with_content(reply_with_quantity(repr(largest)))
+
+    monkeypatch.setattr("app.chat.llm.acompletion", fake_completion)
+    response = client.post("/api/chat", json={"message": "buy"})
+
+    assert response.status_code == 200
+    actions = response.json()["actions"]
+    assert len(actions) == 2
+    assert actions[0]["status"] == "ok"
+    assert actions[1]["status"] == "failed"
+    assert actions[1]["error"].startswith("Insufficient cash")
+    assert actions[1]["quantity"] == largest
+    assert client.get("/api/portfolio").json()["cash_balance"] == 10000.0
+    with get_connection() as conn:
+        assert repository.is_watched(conn, "PYPL") is True
+        messages = repository.recent_chat_messages(conn)
+    assert len(messages) == 2
+    assert messages[1].actions == actions
