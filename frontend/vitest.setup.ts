@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
+import { resetPriceStore } from "./src/lib/priceStore";
 
 class FixedSizeResizeObserver {
   constructor(private callback: ResizeObserverCallback) {}
@@ -48,4 +49,5 @@ window.HTMLElement.prototype.scrollIntoView = vi.fn();
 afterEach(() => {
   cleanup();
   FakeEventSource.instances = [];
+  resetPriceStore();
 });
