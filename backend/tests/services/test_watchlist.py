@@ -1,6 +1,8 @@
+import asyncio
+
 import pytest
 
-from app.db import repository
+from app.db import get_connection, repository
 from app.errors import NotFoundError, ValidationError
 from app.services.portfolio import execute_trade
 from app.services.watchlist import add_to_watchlist, get_watchlist, remove_from_watchlist, tracked_tickers
@@ -15,6 +17,25 @@ async def test_add_normalizes_and_prices(conn, cache, source):
 async def test_add_existing_is_noop(conn, cache, source):
     assert await add_to_watchlist(conn, source, "AAPL") == "AAPL"
     assert repository.list_watchlist(conn).count("AAPL") == 1
+
+
+async def test_concurrent_adds_of_same_ticker_store_one_row(conn, source, monkeypatch):
+    real_add_ticker = source.add_ticker
+
+    async def yielding_add_ticker(ticker):
+        await asyncio.sleep(0)
+        return await real_add_ticker(ticker)
+
+    monkeypatch.setattr(source, "add_ticker", yielding_add_ticker)
+
+    async def add_on_own_connection():
+        with get_connection() as own_conn:
+            return await add_to_watchlist(own_conn, source, "ZZZZ")
+
+    results = await asyncio.gather(add_on_own_connection(), add_on_own_connection())
+
+    assert results == ["ZZZZ", "ZZZZ"]
+    assert repository.list_watchlist(conn).count("ZZZZ") == 1
 
 
 @pytest.mark.parametrize("raw", ["", "TOOLONG", "AB1", "BRK.B"])

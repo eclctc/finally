@@ -1,7 +1,4 @@
-import sqlite3
 from datetime import datetime, timedelta, timezone
-
-import pytest
 
 from app.db import repository as repo
 from app.db.connection import DEFAULT_TICKERS
@@ -23,9 +20,10 @@ def test_insert_watchlist_row_appends(conn):
     assert repo.is_watched(conn, "PYPL")
 
 
-def test_insert_duplicate_watchlist_row_raises(conn):
-    with pytest.raises(sqlite3.IntegrityError):
-        repo.insert_watchlist_row(conn, "AAPL")
+def test_insert_duplicate_watchlist_row_is_ignored(conn):
+    repo.insert_watchlist_row(conn, "AAPL")
+    assert repo.list_watchlist(conn).count("AAPL") == 1
+    assert repo.list_watchlist(conn) == DEFAULT_TICKERS
 
 
 def test_delete_watchlist_row(conn):
