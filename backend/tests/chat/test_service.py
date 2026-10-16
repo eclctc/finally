@@ -1,3 +1,6 @@
+import json
+import sqlite3
+
 import pytest
 
 from app.chat import service
@@ -87,3 +90,30 @@ async def test_prior_failures_reach_next_prompt(conn, cache, source, fake_reply)
     assert [m["role"] for m in second_prompt] == ["system", "user", "assistant", "user"]
     assert "Insufficient shares" in second_prompt[2]["content"]
     assert "AAPL: $100.00" in second_prompt[0]["content"]
+
+
+async def test_unexpected_action_failure_is_isolated(conn, cache, source, fake_reply, monkeypatch, caplog):
+    real_insert_trade = repository.insert_trade
+    calls = []
+
+    def flaky_insert_trade(*args, **kwargs):
+        calls.append(1)
+        if len(calls) == 2:
+            raise sqlite3.OperationalError("disk I/O error")
+        return real_insert_trade(*args, **kwargs)
+
+    monkeypatch.setattr(repository, "insert_trade", flaky_insert_trade)
+    fake_reply["reply"] = reply(trades=[("AAPL", "buy", 1)] * 3, changes=[("PYPL", "add")])
+
+    result = await handle_chat_message(conn, cache, source, "go")
+
+    assert [a["status"] for a in result["actions"]] == ["ok", "ok", "failed", "ok"]
+    assert result["actions"][2]["error"] == service.UNEXPECTED_ERROR
+    assert "disk I/O" not in json.dumps(result["actions"])
+    assert "disk I/O error" in caplog.text
+    assert repository.get_cash(conn) == 9800.0
+    assert repository.get_position(conn, "AAPL").quantity == 2
+    assert repository.is_watched(conn, "PYPL")
+    assert conn.execute("SELECT COUNT(*) FROM trades").fetchone()[0] == 2
+    assert len(repository.list_snapshots(conn)) == 2
+    assert repository.recent_chat_messages(conn)[-1].actions == result["actions"]
