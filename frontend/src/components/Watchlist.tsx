@@ -19,10 +19,12 @@ interface WatchlistListProps {
   tickers: string[] | null;
   loadFailed: boolean;
   removing: string | null;
+  selectedTicker: string | null;
+  onSelect: (ticker: string) => void;
   onRemove: (ticker: string) => void;
 }
 
-function WatchlistList({ tickers, loadFailed, removing, onRemove }: WatchlistListProps) {
+function WatchlistList({ tickers, loadFailed, removing, selectedTicker, onSelect, onRemove }: WatchlistListProps) {
   if (loadFailed) {
     return (
       <p role="alert" className="break-words px-2 py-2 text-down">
@@ -35,7 +37,14 @@ function WatchlistList({ tickers, loadFailed, removing, onRemove }: WatchlistLis
   return (
     <ul aria-label="Watchlist tickers">
       {tickers.map((ticker) => (
-        <WatchlistRow key={ticker} ticker={ticker} removing={removing === ticker} onRemove={onRemove} />
+        <WatchlistRow
+          key={ticker}
+          ticker={ticker}
+          selected={ticker === selectedTicker}
+          removing={removing === ticker}
+          onSelect={onSelect}
+          onRemove={onRemove}
+        />
       ))}
     </ul>
   );
@@ -46,14 +55,24 @@ const INPUT_CLASS =
 const BUTTON_CLASS =
   "h-7 bg-submit px-4 font-semibold text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 outline-primary";
 
-/** Watchlist panel: add form above rows from GET /api/watchlist, prices from the live store. */
-export function Watchlist() {
+interface WatchlistProps {
+  selectedTicker: string | null;
+  onSelect: (ticker: string | null) => void;
+}
+
+/** Watchlist panel: add form above selectable rows from GET /api/watchlist, prices from the live store. */
+export function Watchlist({ selectedTicker, onSelect }: WatchlistProps) {
   const { tickers, loadFailed, error, adding, removing, add, remove, clearError } = useWatchlist();
   const [draft, setDraft] = useState("");
   const [scrollTarget, setScrollTarget] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const errorId = useId();
+
+  useEffect(() => {
+    if (tickers === null) return;
+    if (selectedTicker === null || !tickers.includes(selectedTicker)) onSelect(tickers[0] ?? null);
+  }, [tickers, selectedTicker, onSelect]);
 
   useEffect(() => {
     if (scrollTarget === null) return;
@@ -120,7 +139,14 @@ export function Watchlist() {
           )}
         </div>
         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
-          <WatchlistList tickers={tickers} loadFailed={loadFailed} removing={removing} onRemove={handleRemove} />
+          <WatchlistList
+            tickers={tickers}
+            loadFailed={loadFailed}
+            removing={removing}
+            selectedTicker={selectedTicker}
+            onSelect={onSelect}
+            onRemove={handleRemove}
+          />
         </div>
       </div>
     </Panel>

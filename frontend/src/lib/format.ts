@@ -20,3 +20,8 @@ export const formatPrice = (n: number) => decimal2.format(noNegativeZero(n));
 export const formatQuantity = (n: number) => quantity.format(n);
 /** Input is a fraction: 0.0123 means 1.23%. */
 export const formatPercent = (fraction: number) => percent.format(fraction);
+/** Color class for a signed value by its displayed text: muted when it shows as zero. */
+export const signClass = (value: number, displayed: string) => {
+  if (!/[1-9]/.test(displayed)) return "text-muted";
+  return value > 0 ? "text-up" : "text-down";
+};

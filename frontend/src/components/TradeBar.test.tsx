@@ -24,7 +24,7 @@ function setup(fetchMock: FetchMock = vi.fn(async () => jsonResponse(FILLED))) {
   vi.stubGlobal("fetch", fetchMock);
   const onFilled = vi.fn();
   const user = userEvent.setup();
-  render(<TradeBar onFilled={onFilled} />);
+  render(<TradeBar selectedTicker={null} onFilled={onFilled} />);
   return { fetchMock, onFilled, user };
 }
 
@@ -232,5 +232,64 @@ describe("TradeBar estimate", () => {
     await user.clear(quantity());
     await user.type(quantity(), "abc");
     expect(estimate()).toHaveTextContent(/^--$/);
+  });
+});
+
+describe("TradeBar selection prefill", () => {
+  const renderWith = (fetchMock: FetchMock = vi.fn(async () => jsonResponse(FILLED))) => {
+    vi.stubGlobal("fetch", fetchMock);
+    const onFilled = vi.fn();
+    const view = render(<TradeBar selectedTicker={null} onFilled={onFilled} />);
+    const select = (next: string | null) => view.rerender(<TradeBar selectedTicker={next} onFilled={onFilled} />);
+    return { fetchMock, select, user: userEvent.setup() };
+  };
+
+  it("fills an empty field on the first selection", () => {
+    const { select } = renderWith();
+    select("AAPL");
+    expect(ticker()).toHaveValue("AAPL");
+  });
+
+  it("typed MSFT survives the first selection", async () => {
+    const { select, user } = renderWith();
+    await user.type(ticker(), "msft");
+    select("AAPL");
+    expect(ticker()).toHaveValue("MSFT");
+  });
+
+  it("a later selection replaces typed text", async () => {
+    const { select, user } = renderWith();
+    await user.type(ticker(), "msft");
+    select("AAPL");
+    select("NVDA");
+    expect(ticker()).toHaveValue("NVDA");
+  });
+
+  it("a selection change clears a trade error", async () => {
+    const failing: FetchMock = vi.fn(async () => jsonResponse({ error: "Insufficient cash" }, 400));
+    const { select, user } = renderWith(failing);
+    await user.type(ticker(), "MSFT");
+    await user.type(quantity(), "1");
+    await user.click(buy());
+    expect(await screen.findByTestId(testIds.tradeError)).toBeInTheDocument();
+    select("AAPL");
+    expect(screen.queryByTestId(testIds.tradeError)).toBeNull();
+  });
+
+  it("a selection change clears a fill line", async () => {
+    const { select, user } = renderWith();
+    await user.type(ticker(), "MSFT");
+    await user.type(quantity(), "2");
+    await user.click(buy());
+    expect(await screen.findByRole("status")).toHaveTextContent("Filled BUY");
+    select("AAPL");
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("a selection change sends no request", () => {
+    const { fetchMock, select } = renderWith();
+    select("AAPL");
+    select("NVDA");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

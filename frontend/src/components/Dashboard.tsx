@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Portfolio } from "@/lib/portfolioValue";
 import { connectPriceStream } from "@/lib/priceStream";
 import { testIds } from "@/lib/testIds";
 import { usePortfolio } from "@/lib/usePortfolio";
 import { Header } from "./Header";
+import { MainChart } from "./MainChart";
 import { Panel } from "./Panel";
 import { TradeBar } from "./TradeBar";
 import { Watchlist } from "./Watchlist";
@@ -13,6 +14,7 @@ import { Watchlist } from "./Watchlist";
 /** Terminal layout: header above the titled panels; owns the one shared portfolio source. */
 export function Dashboard() {
   const { portfolio, failed, setPortfolio } = usePortfolio();
+  const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
   useEffect(() => connectPriceStream(), []);
 
   const handleFilled = useCallback((next: Portfolio) => setPortfolio(next), [setPortfolio]);
@@ -22,11 +24,13 @@ export function Dashboard() {
       <Header portfolio={portfolio} failed={failed} />
       <div className="flex min-h-0 flex-1 gap-px bg-line">
         <main className="grid min-h-0 min-w-0 flex-1 grid-cols-[320px_minmax(0,1fr)] gap-px">
-          <Watchlist />
+          <Watchlist selectedTicker={selectedTicker} onSelect={setSelectedTicker} />
           <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_224px] grid-rows-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-px">
-            <Panel title="Chart" className="col-span-2" />
+            <Panel title="Chart" className="col-span-2">
+              <MainChart selectedTicker={selectedTicker} />
+            </Panel>
             <Panel title="Trade">
-              <TradeBar onFilled={handleFilled} />
+              <TradeBar selectedTicker={selectedTicker} onFilled={handleFilled} />
             </Panel>
             <Panel title="Heatmap" testId={testIds.heatmap} />
             <Panel title="P&L" testId={testIds.pnlChart} className="col-span-2" />

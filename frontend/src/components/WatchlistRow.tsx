@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { formatPercent } from "@/lib/format";
+import { formatPercent, signClass } from "@/lib/format";
 import type { PriceEntry } from "@/lib/priceStore";
 import { testIds } from "@/lib/testIds";
 import { useTickerHistory, useTickerPrice } from "@/lib/usePrice";
@@ -10,31 +10,55 @@ import { Sparkline } from "./Sparkline";
 
 const dailyChange = (entry: PriceEntry) => (entry.price - entry.openPrice) / entry.openPrice;
 
-const changeColor = (change: number | undefined) => {
-  if (change === undefined || change === 0) return "text-muted";
-  return change > 0 ? "text-up" : "text-down";
+const ROW_CLASS = {
+  selected:
+    "flex h-7 cursor-pointer items-center gap-1 px-2 focus-visible:outline-2 outline-primary -outline-offset-2 bg-surface",
+  idle: "flex h-7 cursor-pointer items-center gap-1 px-2 focus-visible:outline-2 outline-primary -outline-offset-2 hover:bg-surface/60",
 };
 
 interface WatchlistRowProps {
   ticker: string;
+  selected: boolean;
   removing: boolean;
+  onSelect: (ticker: string) => void;
   onRemove: (ticker: string) => void;
 }
 
 /** One watchlist row: ticker, live price, daily change vs the session open, sparkline and remove button. */
-export const WatchlistRow = memo(function WatchlistRow({ ticker, removing, onRemove }: WatchlistRowProps) {
+export const WatchlistRow = memo(function WatchlistRow({ ticker, selected, removing, onSelect, onRemove }: WatchlistRowProps) {
   const entry = useTickerPrice(ticker);
   const history = useTickerHistory(ticker);
   const change = entry && dailyChange(entry);
+  const changeText = change === undefined ? "--" : formatPercent(change);
   return (
-    <li data-testid={testIds.watchlistRow(ticker)} className="flex h-7 items-center gap-1 px-2">
-      <span className="min-w-0 flex-1 truncate font-semibold text-text">{ticker}</span>
+    <li
+      data-testid={testIds.watchlistRow(ticker)}
+      tabIndex={0}
+      aria-current={selected ? "true" : undefined}
+      onClick={() => onSelect(ticker)}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        onSelect(ticker);
+      }}
+      className={selected ? ROW_CLASS.selected : ROW_CLASS.idle}
+    >
+      <span
+        className={
+          selected
+            ? "min-w-0 flex-1 truncate font-semibold text-accent"
+            : "min-w-0 flex-1 truncate font-semibold text-text"
+        }
+      >
+        {ticker}
+      </span>
       <FlashingPrice ticker={ticker} entry={entry} />
       <span
         title="Change vs session open"
-        className={`figures w-16 shrink-0 whitespace-nowrap text-right ${changeColor(change)}`}
+        className={`figures w-16 shrink-0 whitespace-nowrap text-right ${change === undefined ? "text-muted" : signClass(change, changeText)}`}
       >
-        {change === undefined ? "--" : formatPercent(change)}
+        {changeText}
       </span>
       <Sparkline history={history} />
       <button
@@ -43,7 +67,10 @@ export const WatchlistRow = memo(function WatchlistRow({ ticker, removing, onRem
         aria-label={`Remove ${ticker}`}
         title={`Remove ${ticker}`}
         disabled={removing}
-        onClick={() => onRemove(ticker)}
+        onClick={(event) => {
+          event.stopPropagation();
+          onRemove(ticker);
+        }}
         className="size-6 shrink-0 text-muted hover:text-down disabled:opacity-50 focus-visible:outline-2 outline-primary"
       >
         ×

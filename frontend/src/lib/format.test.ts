@@ -1,4 +1,4 @@
-import { formatCurrency, formatPercent, formatPrice, formatQuantity } from "@/lib/format";
+import { formatCurrency, formatPercent, formatPrice, formatQuantity, signClass } from "@/lib/format";
 
 /** The E2E suite's own rule for reading a figure back out of the DOM (test/tests/helpers.ts). */
 const parseNumber = (text: string) => Number(text.replace(/[^0-9.-]/g, ""));
@@ -67,5 +67,18 @@ describe("formatPercent", () => {
   it("renders zero and values that round to zero without a sign", () => {
     expect(formatPercent(0)).toBe("0.00%");
     expect(formatPercent(-0.00001)).toBe("0.00%");
+  });
+});
+
+describe("signClass", () => {
+  it("is muted when the displayed text rounds to zero", () => {
+    expect(signClass(0.00004, formatPercent(0.00004))).toBe("text-muted");
+    expect(signClass(-0.00004, formatPercent(-0.00004))).toBe("text-muted");
+    expect(signClass(0, formatPercent(0))).toBe("text-muted");
+  });
+
+  it("colors a visible positive up and a visible negative down", () => {
+    expect(signClass(0.0123, "+1.23%")).toBe("text-up");
+    expect(signClass(-0.0001, formatPercent(-0.0001))).toBe("text-down");
   });
 });

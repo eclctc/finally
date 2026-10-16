@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { errorMessage, request } from "@/lib/api";
 import { formatCurrency, formatPrice, formatQuantity } from "@/lib/format";
 import type { Portfolio } from "@/lib/portfolioValue";
@@ -29,13 +29,27 @@ const BUTTON_CLASS =
   "h-7 flex-1 bg-submit font-semibold text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 outline-primary";
 
 /** Trade bar: ticker and quantity inputs, Buy and Sell market orders, inline result line. */
-export function TradeBar({ onFilled }: { onFilled: (portfolio: Portfolio) => void }) {
+export function TradeBar({
+  selectedTicker,
+  onFilled,
+}: {
+  selectedTicker: string | null;
+  onFilled: (portfolio: Portfolio) => void;
+}) {
   const [ticker, setTicker] = useState("");
   const [quantity, setQuantity] = useState("");
   const [inFlight, setInFlight] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
   const quantityRef = useRef<HTMLInputElement>(null);
+  const hadSelection = useRef(false);
   const livePrice = useTickerPrice(ticker.trim());
+
+  useEffect(() => {
+    if (selectedTicker === null) return;
+    setTicker((typed) => (hadSelection.current || typed === "" ? selectedTicker : typed));
+    hadSelection.current = true;
+    setMessage(null);
+  }, [selectedTicker]);
 
   const amount = Number(quantity);
   const validQuantity = Number.isFinite(amount) && amount > 0;
