@@ -2,7 +2,7 @@ import sqlite3
 
 import pytest
 
-from app.db import get_connection, init_db
+from app.db import get_connection, init_db, repository, savepoint
 
 TABLES = {"users_profile", "watchlist", "positions", "trades", "portfolio_snapshots", "chat_messages"}
 
@@ -51,3 +51,33 @@ def test_watchlist_unique_per_user(conn):
         conn.execute(
             "INSERT INTO watchlist (id, ticker, added_at) VALUES ('x', 'AAPL', '2026-01-01')"
         )
+
+
+def test_outermost_savepoint_commits(db_path):
+    with get_connection() as conn:
+        with savepoint(conn):
+            conn.execute("UPDATE users_profile SET cash_balance = 1.0")
+        assert conn.in_transaction is False
+        other = sqlite3.connect(db_path)
+        assert other.execute("SELECT cash_balance FROM users_profile").fetchone()[0] == 1.0
+        other.close()
+
+
+def test_nested_savepoint_rolls_back_only_itself(conn):
+    with savepoint(conn):
+        repository.insert_watchlist_row(conn, "PYPL")
+        with pytest.raises(RuntimeError):
+            with savepoint(conn):
+                repository.insert_watchlist_row(conn, "UBER")
+                raise RuntimeError("boom")
+    assert repository.is_watched(conn, "PYPL")
+    assert not repository.is_watched(conn, "UBER")
+
+
+def test_savepoint_rolls_back_and_reraises(conn):
+    with pytest.raises(RuntimeError):
+        with savepoint(conn):
+            conn.execute("UPDATE users_profile SET cash_balance = 1.0")
+            raise RuntimeError("boom")
+    assert repository.get_cash(conn) == 10000.0
+    assert conn.in_transaction is False

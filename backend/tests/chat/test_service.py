@@ -1,4 +1,5 @@
 import json
+import os
 import sqlite3
 
 import pytest
@@ -117,3 +118,63 @@ async def test_unexpected_action_failure_is_isolated(conn, cache, source, fake_r
     assert conn.execute("SELECT COUNT(*) FROM trades").fetchone()[0] == 2
     assert len(repository.list_snapshots(conn)) == 2
     assert repository.recent_chat_messages(conn)[-1].actions == result["actions"]
+
+
+async def test_actions_commit_one_by_one_without_spanning_awaits(conn, cache, source, fake_reply, monkeypatch):
+    in_transaction_at_await = []
+    real_add, real_remove = source.add_ticker, source.remove_ticker
+
+    async def spy_add(ticker):
+        in_transaction_at_await.append(conn.in_transaction)
+        return await real_add(ticker)
+
+    async def spy_remove(ticker):
+        in_transaction_at_await.append(conn.in_transaction)
+        return await real_remove(ticker)
+
+    monkeypatch.setattr(source, "add_ticker", spy_add)
+    monkeypatch.setattr(source, "remove_ticker", spy_remove)
+    fake_reply["reply"] = reply(
+        trades=[("PYPL", "buy", 1)],
+        changes=[("PYPL", "add"), ("UBER", "add"), ("AAPL", "remove")],
+    )
+
+    await handle_chat_message(conn, cache, source, "go")
+
+    assert in_transaction_at_await == [False, False, False]
+    assert conn.in_transaction is False
+    other = sqlite3.connect(os.environ["FINALLY_DB_PATH"])
+    watched = {row[0] for row in other.execute("SELECT ticker FROM watchlist")}
+    assert {"PYPL", "UBER"} <= watched and "AAPL" not in watched
+    assert other.execute("SELECT COUNT(*) FROM trades").fetchone()[0] == 1
+    assert other.execute("SELECT COUNT(*) FROM chat_messages").fetchone()[0] == 2
+    other.close()
+
+
+async def test_no_transaction_open_during_llm_call(conn, cache, source, monkeypatch):
+    seen = {}
+
+    async def fake_generate_reply(messages, user_message):
+        seen["in_transaction"] = conn.in_transaction
+        other = sqlite3.connect(os.environ["FINALLY_DB_PATH"], timeout=0)
+        other.execute("BEGIN IMMEDIATE")
+        other.rollback()
+        other.close()
+        seen["lock_taken"] = True
+        return reply(trades=[("AAPL", "buy", 1)], changes=[("PYPL", "add")])
+
+    monkeypatch.setattr(service, "generate_reply", fake_generate_reply)
+
+    await handle_chat_message(conn, cache, source, "go")
+
+    assert seen == {"in_transaction": False, "lock_taken": True}
+
+
+async def test_reply_without_actions_stores_empty_list(conn, cache, source, fake_reply):
+    fake_reply["reply"] = reply()
+
+    result = await handle_chat_message(conn, cache, source, "hello")
+
+    assert result["actions"] == []
+    assert repository.recent_chat_messages(conn)[-1].actions == []
+    assert repository.get_cash(conn) == 10000.0
