@@ -10,7 +10,7 @@ from app.services.portfolio import execute_trade_and_sync, get_portfolio
 from app.services.watchlist import add_to_watchlist, remove_from_watchlist
 
 from .llm import generate_reply
-from .prompt import build_messages
+from .prompt import MAX_ACTIONS_PER_KIND, build_messages
 from .schemas import TradeInstruction, WatchlistChange
 
 logger = logging.getLogger(__name__)
@@ -76,6 +76,26 @@ async def apply_trade(conn, cache, source, trade: TradeInstruction) -> dict:
     return await run_action(describe_trade(trade), perform)
 
 
+def skipped(action: dict, noun: str) -> dict:
+    """Record an action over the per-message cap as failed without running it."""
+    error = f"Skipped: only the first {MAX_ACTIONS_PER_KIND} {noun} per message are executed"
+    return {**action, "status": "failed", "error": error}
+
+
+async def run_watchlist_changes(conn, source, changes: list[WatchlistChange]) -> list[dict]:
+    """Apply the first MAX_ACTIONS_PER_KIND watchlist changes and record the rest as skipped."""
+    actions = [await apply_watchlist_change(conn, source, change) for change in changes[:MAX_ACTIONS_PER_KIND]]
+    over_cap = changes[MAX_ACTIONS_PER_KIND:]
+    return actions + [skipped(describe_watchlist_change(change), "watchlist changes") for change in over_cap]
+
+
+async def run_trades(conn, cache, source, trades: list[TradeInstruction]) -> list[dict]:
+    """Execute the first MAX_ACTIONS_PER_KIND trades and record the rest as skipped."""
+    actions = [await apply_trade(conn, cache, source, trade) for trade in trades[:MAX_ACTIONS_PER_KIND]]
+    over_cap = trades[MAX_ACTIONS_PER_KIND:]
+    return actions + [skipped(describe_trade(trade), "trades") for trade in over_cap]
+
+
 async def handle_chat_message(conn, cache, source, message: str) -> dict:
     """Run one chat turn. Raises LLMError before anything is executed or stored."""
     messages = build_messages(
@@ -86,8 +106,8 @@ async def handle_chat_message(conn, cache, source, message: str) -> dict:
     )
     reply = await generate_reply(messages, message)
 
-    actions = [await apply_watchlist_change(conn, source, change) for change in reply.watchlist_changes]
-    actions += [await apply_trade(conn, cache, source, trade) for trade in reply.trades]
+    actions = await run_watchlist_changes(conn, source, reply.watchlist_changes)
+    actions += await run_trades(conn, cache, source, reply.trades)
 
     with savepoint(conn):
         repository.insert_chat_message(conn, "user", message, None)

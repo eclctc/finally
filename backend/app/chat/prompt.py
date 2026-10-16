@@ -2,6 +2,8 @@
 
 import json
 
+MAX_ACTIONS_PER_KIND = 5  # shared by the prompt text and the service-level cap
+
 SYSTEM_PROMPT = """You are FinAlly, an AI trading assistant inside a simulated trading workstation.
 The user trades a virtual portfolio with fake money. Market orders fill instantly at the current price.
 
