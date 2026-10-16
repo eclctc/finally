@@ -1,7 +1,11 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Header } from "@/components/Header";
+import { connectPriceStream, RECREATE_DELAY_MS } from "@/lib/priceStream";
 import { testIds } from "@/lib/testIds";
+import type { FakeEventSource } from "../../vitest.setup";
+
+const Fake = globalThis.EventSource as unknown as typeof FakeEventSource;
 
 const parseNumber = (text: string) => Number(text.replace(/[^0-9.-]/g, ""));
 
@@ -11,7 +15,10 @@ function stubPortfolio(body: { cash_balance: number; total_value: number }) {
   return fetchMock;
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 describe("Header", () => {
   it("shows -- in both figures while the portfolio request is pending", () => {
@@ -38,13 +45,51 @@ describe("Header", () => {
     expect(screen.getByTestId(testIds.totalValue).textContent).toBe("$12,345.68");
   });
 
-  it("starts disconnected because Phase 1 opens no price stream", () => {
+  it("starts reconnecting", () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
     render(<Header />);
+    const dot = screen.getByRole("status");
+    expect(dot).toBe(screen.getByTestId(testIds.connectionStatus));
+    expect(dot).toHaveAttribute("data-status", "reconnecting");
+    expect(dot).toHaveAttribute("title", "Reconnecting");
+    expect(dot).toHaveTextContent("Reconnecting");
+    expect(dot).toHaveClass("bg-accent");
+    expect(dot).not.toHaveAttribute("aria-label");
+  });
+
+  it("follows the stream lifecycle", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    render(<Header />);
+    const stopStream = connectPriceStream();
     const dot = screen.getByTestId(testIds.connectionStatus);
-    expect(dot).toHaveAttribute("data-status", "disconnected");
-    expect(dot).toHaveAttribute("title", "Disconnected");
-    expect(dot).toHaveAttribute("aria-label", "Disconnected");
+    const expectDot = (status: string, label: string, color: string) => {
+      expect(dot).toHaveAttribute("data-status", status);
+      expect(dot).toHaveAttribute("title", label);
+      expect(dot).toHaveTextContent(label);
+      expect(dot).toHaveClass(color);
+    };
+
+    act(() => Fake.instances[0].open());
+    expectDot("connected", "Connected", "bg-up");
+    act(() => Fake.instances[0].fail());
+    expectDot("reconnecting", "Reconnecting", "bg-accent");
+    act(() => Fake.instances[0].fail(true));
+    expectDot("disconnected", "Disconnected", "bg-down");
+    act(() => vi.advanceTimersByTime(RECREATE_DELAY_MS));
+    expect(Fake.instances).toHaveLength(2);
+    act(() => Fake.instances[1].open());
+    expectDot("connected", "Connected", "bg-up");
+
+    stopStream();
+    vi.useRealTimers();
+  });
+
+  it("renders the wordmark as the only h1", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    render(<Header />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("FinAlly");
+    expect(screen.getByText("Ally")).toHaveClass("text-accent");
   });
 
   it("keeps the labels outside the figure elements", () => {
