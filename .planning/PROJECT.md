@@ -38,19 +38,20 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 - ✓ Watchlist panel: price flash (50ms hold, ~500ms fade, none under reduced motion), daily change % vs session open, 64x20 sparkline since load, add/remove with inline errors, loading/failed/empty states — Phase 3
 - ✓ `EventSource` SSE client: one stream, per-ticker store, CLOSED stream recreated after 1s — Phase 3
 - ✓ Layout keeps Chart and Heatmap usable: 1280px minimum width (D-01) — Phase 3
+- ✓ Main chart for the selected ticker: row click or keyboard selects, first ticker by default, 1,200 timestamped points (10 min), Open line, tooltip — Phase 4
+- ✓ Trade bar: ticker, quantity (fractional), buy/sell, disabled in flight, inline backend errors, fill line; typed ticker survives the default selection — Phase 4
+- ✓ Header, positions and heatmap update from the trade response without a reload; one `usePortfolio()` in `Dashboard` with a 30 s poll and stale-response guard — Phase 4
+- ✓ Positions table: ticker, qty, avg cost, live price, unrealized P&L, % change; row disappears when closed — Phase 4
+- ✓ Portfolio heatmap (Recharts Treemap, custom `<rect>` tiles) sized by live value, colored by P&L, empty state — Phase 4
+- ✓ P&L line chart from `/api/portfolio/history`: 300-point downsample, `Start $10,000` baseline, live tail, 30 s history poll — Phase 4
+- ✓ Recharts for all charts — Phase 4
 
 ### Active
 
 **Frontend (built fresh, PLAN.md §10):**
-- [ ] Main chart for the selected ticker (click a watchlist row to select)
-- [ ] Portfolio heatmap (Recharts Treemap) sized by weight, colored by P&L
-- [ ] P&L line chart from `/api/portfolio/history`
-- [ ] Positions table: ticker, qty, avg cost, current price, unrealized P&L, % change
-- [ ] Trade bar: ticker, quantity, buy/sell buttons, instant market fill, inline errors
 - [ ] AI chat panel: docked/collapsible, history, loading indicator, inline trade/watchlist confirmations and failures, inline 502 errors
-- [ ] Recharts for all charts (sparklines shipped in Phase 3)
-- [ ] Frontend unit tests with Vitest + React Testing Library (138 tests after Phase 3; coverage grows per phase)
-- [ ] Header total refreshes after trades: `usePortfolio()` lives only in Header; Phase 4 must lift or share it to call `refresh()`
+- [ ] Frontend unit tests with Vitest + React Testing Library (278 tests after Phase 4; coverage grows per phase)
+- [ ] Test robustness: two timing-sensitive tests flake under heavy parallel CPU load (Phase 4 review WR-01/WR-02)
 
 **Integration:**
 - [ ] `docker build` succeeds and `scripts/start_mac.sh` launches a working app at `http://localhost:8000`
@@ -99,6 +100,9 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 | Module-level price store read via `useSyncExternalStore`; SSE is the only price source, REST only seeds unpriced tickers | Per-ticker re-renders; avoids the REST-vs-stream race in `sse-reconnect.spec.ts` | ✓ Good — Phase 3 (UAT 4/4, Playwright 3/3) |
 | 1280px minimum width instead of 1024px | Chart/Heatmap cells were ~68px at 1024 | ✓ Good — Phase 3 UAT layout check |
 | Header shows the client-computed live total, not the API `total_value` | The total moves with every tick | ✓ Good — Phase 3; review WR-01..WR-04 open (watchlist refresh/race robustness, change color rounding) |
+| One `usePortfolio()` and one `usePortfolioHistory()` in `Dashboard`, passed as props; trades apply the POST response directly | No context needed for direct children; no extra GET after a trade; Phase 5 chat reuses `refresh()`/`refreshHistory()` | ✓ Good — Phase 4 (UAT 3/3, E2E 9/9) |
+| Treemap tiles via a custom `content` renderer returning `<rect>` + `<text>`, no `clipPath` | E2E reads the first `svg rect` of the heatmap; spike confirmed in jsdom and Chromium | ✓ Good — Phase 4 |
+| Up/down color from the displayed (rounded) value via `signClass` | `+0.004%` displays `0.00%` and must be muted (closes Phase 3 WR-04) | ✓ Good — Phase 4 |
 
 ## Evolution
 
@@ -118,4 +122,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-16 after Phase 3*
+*Last updated: 2026-10-16 after Phase 4*

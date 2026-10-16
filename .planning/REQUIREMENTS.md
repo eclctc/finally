@@ -40,18 +40,18 @@ The backend already exists. See PROJECT.md "Validated" for the existing capabili
 
 ### Charts & Trading
 
-- [ ] **TRADE-01**: Clicking a watchlist row selects that ticker. The main chart shows its price over time since page load, with tooltips, and exposes the selected ticker through `data-ticker`.
-- [ ] **TRADE-02**: Selecting a ticker fills the trade bar's ticker field.
-- [ ] **TRADE-03**: The user can buy or sell a quantity, including fractional amounts, from the trade bar. The buttons are disabled while the request is in flight.
-- [ ] **TRADE-04**: A rejected trade shows the backend `{"error"}` text inline in the trade bar, for example insufficient cash or shares, or an unknown ticker.
-- [ ] **TRADE-05**: After a successful trade, the cash balance, positions and P&L history update without a page reload.
+- [x] **TRADE-01**: Clicking a watchlist row selects that ticker. The main chart shows its price over time since page load, with tooltips, and exposes the selected ticker through `data-ticker`.
+- [x] **TRADE-02**: Selecting a ticker fills the trade bar's ticker field.
+- [x] **TRADE-03**: The user can buy or sell a quantity, including fractional amounts, from the trade bar. The buttons are disabled while the request is in flight.
+- [x] **TRADE-04**: A rejected trade shows the backend `{"error"}` text inline in the trade bar, for example insufficient cash or shares, or an unknown ticker.
+- [x] **TRADE-05**: After a successful trade, the cash balance, positions and P&L history update without a page reload.
 
 ### Portfolio Views
 
-- [ ] **PORT-01**: The positions table shows ticker, quantity, average cost, live current price, unrealized P&L and % change. A row disappears when its position closes.
-- [ ] **PORT-02**: The portfolio heatmap is a Recharts Treemap. Each position is a labeled `<rect>` sized by market value and colored green or red by P&L. An empty state shows when there are no positions.
-- [ ] **PORT-03**: The P&L line chart plots total value from `/api/portfolio/history`. It downsamples to about 300 points on the client, has tooltips, and has a $10,000 baseline.
-- [ ] **PORT-04**: The P&L chart shows a live tail point for the current total value. History and portfolio refresh every 30 seconds.
+- [x] **PORT-01**: The positions table shows ticker, quantity, average cost, live current price, unrealized P&L and % change. A row disappears when its position closes.
+- [x] **PORT-02**: The portfolio heatmap is a Recharts Treemap. Each position is a labeled `<rect>` sized by market value and colored green or red by P&L. An empty state shows when there are no positions.
+- [x] **PORT-03**: The P&L line chart plots total value from `/api/portfolio/history`. It downsamples to about 300 points on the client, has tooltips, and has a $10,000 baseline.
+- [x] **PORT-04**: The P&L chart shows a live tail point for the current total value. History and portfolio refresh every 30 seconds.
 
 ### AI Chat
 
@@ -128,15 +128,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LIVE-06 | Phase 3 | Complete |
 | LIVE-07 | Phase 3 | Complete |
 | LIVE-08 | Phase 3 | Complete |
-| TRADE-01 | Phase 4 | Pending |
-| TRADE-02 | Phase 4 | Pending |
-| TRADE-03 | Phase 4 | Pending |
-| TRADE-04 | Phase 4 | Pending |
-| TRADE-05 | Phase 4 | Pending |
-| PORT-01 | Phase 4 | Pending |
-| PORT-02 | Phase 4 | Pending |
-| PORT-03 | Phase 4 | Pending |
-| PORT-04 | Phase 4 | Pending |
+| TRADE-01 | Phase 4 | Complete |
+| TRADE-02 | Phase 4 | Complete |
+| TRADE-03 | Phase 4 | Complete |
+| TRADE-04 | Phase 4 | Complete |
+| TRADE-05 | Phase 4 | Complete |
+| PORT-01 | Phase 4 | Complete |
+| PORT-02 | Phase 4 | Complete |
+| PORT-03 | Phase 4 | Complete |
+| PORT-04 | Phase 4 | Complete |
 | CHAT-01 | Phase 5 | Pending |
 | CHAT-02 | Phase 5 | Pending |
 | CHAT-03 | Phase 5 | Pending |

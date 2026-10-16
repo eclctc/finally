@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Walking Skeleton** - Next.js static export with dark theme, test harness and testid contract, built and served by the Docker container (completed 2026-10-16)
 - [x] **Phase 2: Backend Hardening** - Chat and watchlist APIs fail cleanly with 502s, idempotent adds, per-action failures and action caps (completed 2026-10-16)
 - [x] **Phase 3: Live Watchlist & Header** - One SSE price store drives the watchlist rows, flashes, sparklines, connection dot and live header totals (completed 2026-10-16)
-- [ ] **Phase 4: Trading & Portfolio** - Ticker selection, main chart, trade bar, positions table, heatmap and P&L chart
+- [x] **Phase 4: Trading & Portfolio** - Ticker selection, main chart, trade bar, positions table, heatmap and P&L chart (completed 2026-10-16)
 - [ ] **Phase 5: AI Chat** - Docked chat panel with inline action results, error handling and a refresh after AI actions
 - [ ] **Phase 6: Ship & E2E Gate** - The start script launches a working app and the full Playwright suite passes with LLM_MOCK=true
 
@@ -125,7 +125,7 @@ Research flag: spike the `EventSource` CLOSED path (non-200 response) against `t
   4. The heatmap shows each position as a labeled rectangle sized by market value and colored green or red by P&L, and it shows an empty state when there are no positions.
   5. The P&L chart plots total value over time (downsampled to about 300 points) with tooltips, a $10,000 baseline and a live tail point. History and portfolio refresh every 30 seconds.
 
-**Plans**: 7/7 plans executed
+**Plans**: 7/7 plans complete
 
 Plans:
 **Wave 1**
@@ -209,6 +209,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 2 has no
 | 1. Walking Skeleton | 4/4 | Complete    | 2026-10-16 |
 | 2. Backend Hardening | 6/6 | Complete    | 2026-10-16 |
 | 3. Live Watchlist & Header | 5/5 | Complete    | 2026-10-16 |
-| 4. Trading & Portfolio | 7/7 | In Progress | - |
+| 4. Trading & Portfolio | 7/7 | Complete    | 2026-10-16 |
 | 5. AI Chat | 0/TBD | Not started | - |
 | 6. Ship & E2E Gate | 0/TBD | Not started | - |
