@@ -193,6 +193,14 @@ Backstop considerations (verified visually at UAT, not by a dedicated automated 
 
 <!-- Rows are replaced, not appended, if the ui-phase probe re-runs. -->
 
+
+Probe backstop (ui-consideration probe, 39 applicable items, 1 unclassified; per the user's Phase 3 rule the explicit rows above stay authoritative and the probe's remaining items are backstopped):
+
+- { statement: "Transcript, action-chip list and highlighted rows: zero, one and many items, partial results (some actions failed) and overflow all render inside the 320px chat column with the transcript scrolling, not the page", verification: backstop }
+- { statement: "Composer, error block and quick-prompt chips: pending, error and long-text states keep the composer, Send and the alert inside the panel with no horizontal scroll", verification: backstop }
+- { statement: "Collapse toggle and rail: toggling during a pending request keeps the request, the loading state and the conversation", verification: backstop }
+- { statement: "Loading indicator (probe-unclassified, reviewed manually): 'Thinking...' is present only while a request is in flight and removed from the DOM on success and on error", verification: backstop }
+
 ---
 
 ## Layout Contract

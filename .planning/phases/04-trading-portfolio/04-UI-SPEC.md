@@ -1,7 +1,8 @@
 ---
 phase: "4"
 slug: trading-portfolio
-status: draft
+status: approved
+reviewed_at: "2026-10-16"
 shadcn_initialized: false
 preset: none
 created: "2026-10-16"
@@ -72,15 +73,15 @@ Fixed component dimensions for this phase (all multiples of 4):
 
 Exceptions: the Phase 1 / 3 list (1px hairlines, 10px dot, 2px focus outline, 28px controls, 1.5px stroke) plus three chart-only items that are stroke or radius values, not spacing: 1.5px chart line stroke, 3px dot radius (live tail, tooltip active dot), 1px `surface` heatmap tile stroke. Chart margins are `{ top: 8, right: 8, bottom: 0, left: 0 }`. Nothing else leaves the scale.
 
-Derived from the 1280px grid (Phase 3 decision D-01), not declared values and not part of the fixed-dimension table above: at the 1280x720 minimum the panel heights are 268 / 214 / 182 including the 32px title strip, giving bodies of 236 / 182 / 150, and the panel widths are 206 / 413 / 638 / 959 (Heatmap / Chart and P&L / Positions / center column). Buy and Sell are about 99px each in the 224px Trade panel (inner width less 8px gap, halved), a derived consequence of `flex-1`. The budget below is derived from these figures:
+Derived from the 1280px grid (Phase 3 decision D-01), not declared values and not part of the fixed-dimension table above: at the 1280x720 minimum the panel heights are 268 / 214 / 182 including the 32px title strip, giving bodies of 236 / 182 / 150, and the panel widths are 206 / 413 / 638 / 959 (Heatmap / Chart and P&L / Positions / center column). Buy and Sell share the Trade panel width equally (`flex-1`). The budget below is derived from these figures:
 
 | Panel (derived width) | Body (derived) | Contents |
 |-------|------|----------|
 | Chart (413 wide) | 236px | caption strip 28 + chart 208 |
-| Trade (224 wide) | 236px | inputs, buttons, estimate row, one message (about 190px); a second message line scrolls inside the panel |
+| Trade (224 wide) | 236px | inputs, buttons, estimate row, one message line (about 84px left after 16px padding, four rows of 28/28/28/20 and four 8px gaps); a second message line scrolls inside the panel |
 | Heatmap (206 wide) | 182px | treemap fills the body |
 | P&L (413 wide) | 182px | chart fills the body |
-| Positions (638 wide) | 150px | head row 28 + 4 visible rows (112); more rows scroll with a sticky head |
+| Positions (638 wide) | 150px | head row 28 + 4 visible rows (112), 10px spare; more rows scroll with a sticky head |
 
 ---
 
@@ -216,6 +217,14 @@ Backstop considerations (user-confirmed items are verified visually at UAT, not 
 - { statement: "Positions table header stays pinned and aligned with its columns while the body scrolls at the 150px minimum body height", verification: backstop }
 
 <!-- Rows are replaced, not appended, if the ui-phase probe re-runs. -->
+
+
+Probe backstop (ui-consideration probe, 24 applicable items, 2 unclassified; per the user's Phase 3 rule the explicit rows above stay authoritative and the probe's remaining items are backstopped):
+
+- { statement: "Trade bar: empty, pending, error, partial (ticker without quantity), overflow and long ticker or long backend error text all render inside the 224px Trade panel without breaking the layout", verification: backstop }
+- { statement: "Positions table and watchlist selection: zero, one and many rows, the loading and error states, and a partially priced position all render without a layout jump; many rows scroll under the sticky head", verification: backstop }
+- { statement: "Heatmap: a single tile, many small tiles and long tickers keep labels readable or hidden by the size threshold, with no overflow outside the panel", verification: backstop }
+- { statement: "Main chart and P&L chart (probe-unclassified, reviewed manually): the no-data, one-point, loading and error states each show their copy-contract text and never an empty broken SVG", verification: backstop }
 
 ---
 
@@ -485,12 +494,12 @@ No CONTEXT.md existed and no interactive channel was available, so these were de
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
-- [ ] Dimension 7 Inventory Provenance: PASS
+- [x] Dimension 1 Copywriting: FLAG (bare verbs `Buy` / `Sell` kept as Phase 1 reserved strings, same precedent as `Add` and `Send`)
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS (revision 1 removed the declared 99px width)
+- [x] Dimension 6 Registry Safety: PASS
+- [x] Dimension 7 Inventory Provenance: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-10-16
