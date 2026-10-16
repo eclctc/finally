@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from app.chat.prompt import build_messages
+from app.chat.prompt import MAX_ACTIONS_PER_KIND, build_messages
 
 PORTFOLIO = {
     "cash_balance": 8000.0,
@@ -31,6 +31,11 @@ def test_system_prompt_contains_context():
     assert "Total portfolio value: $10100.00" in system
     assert "AAPL: 10 shares, avg cost $200.00, price $210.00, P&L $100.00 (5.00%)" in system
     assert "PYPL: no price yet" in system
+
+
+def test_system_prompt_states_action_cap():
+    system = build_messages(PORTFOLIO, WATCHLIST, [], "hello")[0]["content"]
+    assert f"at most {MAX_ACTIONS_PER_KIND} trades and {MAX_ACTIONS_PER_KIND} watchlist changes" in system
 
 
 def test_history_then_user_message():
