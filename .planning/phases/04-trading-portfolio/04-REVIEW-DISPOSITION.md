@@ -5,11 +5,11 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Dashboard test \"selects the first watchlist ticker on a fresh load\" races an effect-synced render (reproduced flake)"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Store-driven Watchlist and Dashboard tests assert synchronously after `act` on timing they do not control"
   - id: WR-03
     severity: warning
@@ -21,7 +21,7 @@ findings:
     title: "A failed trade request tells the user to \"Try again\" without checking whether it filled"
   - id: WR-05
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "One failed watchlist reload replaces an already loaded list with \"Reload the page\"; reloads are unordered"
   - id: IN-01
     severity: info
@@ -55,20 +55,20 @@ findings:
     severity: info
     disposition: open
     title: "Trade result live regions are mounted together with their text"
-open: 11
+open: 8
 total: 13
-recorded: 2026-10-16T23:56:02.225Z
+recorded: 2026-10-16T23:56:15.304Z
 ---
 
 # Phase 04: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
+| WR-01 | warning | fixed | 04-REVIEW-FIX.md |
+| WR-02 | warning | fixed | 04-REVIEW-FIX.md |
 | WR-03 | warning | fixed | 04-REVIEW-FIX.md |
 | WR-04 | warning | fixed | 04-REVIEW-FIX.md |
-| WR-05 | warning | open | - |
+| WR-05 | warning | fixed | 04-REVIEW-FIX.md |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
