@@ -34,15 +34,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `next dev` serves the shell with `/api/*` proxied to the backend on `:8000`, and SSE frames from `/api/stream/prices` arrive unbuffered.
   5. The theme colors (`#0d1117`/`#1a1a2e`, muted borders, `#ecad0a`, `#209dd7`, `#753991`) are usable as Tailwind tokens, and every E2E testid and number formatter comes from one shared module.
 
-**Plans**: 1/4 plans executed
+**Plans**: 3/4 plans executed
 
 Plans:
 **Wave 1**
 - [x] 01-01-PLAN.md — Package legitimacy check, then tracer: Next 16 static export with theme tokens built by the existing Dockerfile and served at :8000
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 01-02-PLAN.md — Vitest + RTL harness with ResizeObserver/EventSource/scrollIntoView stubs; testIds module with spec parity; bare-number formatters and fetch wrapper
-- [ ] 01-04-PLAN.md — Dev loop: next dev proxies /api to :8000 with a 40 s unbuffered SSE check; README dev and build commands (wave 2, alongside 01-02)
+- [x] 01-02-PLAN.md — Vitest + RTL harness with ResizeObserver/EventSource/scrollIntoView stubs; testIds module with spec parity; bare-number formatters and fetch wrapper
+- [x] 01-04-PLAN.md — Dev loop: next dev proxies /api to :8000 with a 40 s unbuffered SSE check; README dev and build commands (wave 2, alongside 01-02)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 01-03-PLAN.md — Header reads real cash/total from /api/portfolio; terminal layout panels; rebuilt container serves the real-data shell
@@ -142,7 +142,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 2 has no
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Walking Skeleton | 1/4 | In Progress | - |
+| 1. Walking Skeleton | 3/4 | In Progress | - |
 | 2. Backend Hardening | 0/TBD | Not started | - |
 | 3. Live Watchlist & Header | 0/TBD | Not started | - |
 | 4. Trading & Portfolio | 0/TBD | Not started | - |
