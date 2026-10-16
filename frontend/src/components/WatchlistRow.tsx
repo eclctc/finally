@@ -15,8 +15,14 @@ const changeColor = (change: number | undefined) => {
   return change > 0 ? "text-up" : "text-down";
 };
 
-/** One watchlist row: ticker, live price and daily change vs the session open. */
-export const WatchlistRow = memo(function WatchlistRow({ ticker }: { ticker: string }) {
+interface WatchlistRowProps {
+  ticker: string;
+  removing: boolean;
+  onRemove: (ticker: string) => void;
+}
+
+/** One watchlist row: ticker, live price, daily change vs the session open, sparkline and remove button. */
+export const WatchlistRow = memo(function WatchlistRow({ ticker, removing, onRemove }: WatchlistRowProps) {
   const entry = useTickerPrice(ticker);
   const history = useTickerHistory(ticker);
   const change = entry && dailyChange(entry);
@@ -31,6 +37,17 @@ export const WatchlistRow = memo(function WatchlistRow({ ticker }: { ticker: str
         {change === undefined ? "--" : formatPercent(change)}
       </span>
       <Sparkline history={history} />
+      <button
+        type="button"
+        data-testid={testIds.watchlistRemove(ticker)}
+        aria-label={`Remove ${ticker}`}
+        title={`Remove ${ticker}`}
+        disabled={removing}
+        onClick={() => onRemove(ticker)}
+        className="size-6 shrink-0 text-muted hover:text-down disabled:opacity-50 focus-visible:outline-2 outline-primary"
+      >
+        ×
+      </button>
     </li>
   );
 });

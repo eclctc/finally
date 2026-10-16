@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { testIds } from "@/lib/testIds";
 import { useWatchlist } from "@/lib/useWatchlist";
 import { Panel } from "./Panel";
@@ -15,7 +15,14 @@ function WatchlistEmpty() {
   );
 }
 
-function WatchlistList({ tickers, loadFailed }: { tickers: string[] | null; loadFailed: boolean }) {
+interface WatchlistListProps {
+  tickers: string[] | null;
+  loadFailed: boolean;
+  removing: string | null;
+  onRemove: (ticker: string) => void;
+}
+
+function WatchlistList({ tickers, loadFailed, removing, onRemove }: WatchlistListProps) {
   if (loadFailed) {
     return (
       <p role="alert" className="break-words px-2 py-2 text-down">
@@ -27,7 +34,9 @@ function WatchlistList({ tickers, loadFailed }: { tickers: string[] | null; load
   if (tickers.length === 0) return <WatchlistEmpty />;
   return (
     <ul aria-label="Watchlist tickers">
-      {tickers.map((ticker) => <WatchlistRow key={ticker} ticker={ticker} />)}
+      {tickers.map((ticker) => (
+        <WatchlistRow key={ticker} ticker={ticker} removing={removing === ticker} onRemove={onRemove} />
+      ))}
     </ul>
   );
 }
@@ -39,7 +48,7 @@ const BUTTON_CLASS =
 
 /** Watchlist panel: add form above rows from GET /api/watchlist, prices from the live store. */
 export function Watchlist() {
-  const { tickers, loadFailed, error, adding, add, clearError } = useWatchlist();
+  const { tickers, loadFailed, error, adding, removing, add, remove, clearError } = useWatchlist();
   const [draft, setDraft] = useState("");
   const [scrollTarget, setScrollTarget] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,6 +73,14 @@ export function Watchlist() {
     }
     inputRef.current?.focus();
   }
+
+  const handleRemove = useCallback(
+    async (ticker: string) => {
+      await remove(ticker);
+      inputRef.current?.focus();
+    },
+    [remove],
+  );
 
   return (
     <Panel title="Watchlist" testId={testIds.watchlist}>
@@ -103,7 +120,7 @@ export function Watchlist() {
           )}
         </div>
         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
-          <WatchlistList tickers={tickers} loadFailed={loadFailed} />
+          <WatchlistList tickers={tickers} loadFailed={loadFailed} removing={removing} onRemove={handleRemove} />
         </div>
       </div>
     </Panel>
