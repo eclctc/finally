@@ -13,7 +13,7 @@ created: "2026-10-16"
 >
 > This spec EXTENDS the approved Phase 3 contract (`.planning/phases/03-live-watchlist-header/03-UI-SPEC.md`), which itself extends Phase 1. Tokens, the four-size / two-weight type scale, the spacing scale, the 1280px grid (D-01), panel regions, number formats, reserved copy and "Shared Interaction Patterns" are inherited unchanged unless listed under "Deviations and Reconciliations". Where this document is silent, Phase 3 then Phase 1 governs.
 >
-> No CONTEXT.md or RESEARCH.md exists for this phase and no interactive channel was available, so every open question was decided here with a recorded rationale. The decisions the user should confirm are collected in "Decision Log" (items marked CONFIRM).
+> No CONTEXT.md or RESEARCH.md exists for this phase and no interactive channel was available, so every open question was decided here with a recorded rationale. Decisions are collected in "Decision Log"; D-01 and D-02 are confirmed by the user.
 
 ---
 
@@ -65,16 +65,16 @@ Fixed component dimensions for this phase (all multiples of 4):
 | Positions column head row and each position row | 28px high (`h-7`) |
 | Chart caption strip (Chart panel) | 28px high (`h-7`), `border-b border-line`, `px-2` |
 | Trade input, Buy button, Sell button | 28px high |
-| Buy and Sell buttons | equal width, 99px each (222px panel inner minus 16px padding minus 8px gap, halved) |
+| Buy and Sell buttons | equal width via `flex-1` (no pixel width declared), 28px high |
 | Main chart Y axis (price, right side) | `width={56}` |
 | P&L chart Y axis | `width={64}` |
-| Positions columns (`table-fixed`) | Ticker 96px, Qty 104px, Avg cost 104px, Price 104px, P&L flexible (134px at the 638px minimum), P&L % 96px |
+| Positions columns (`table-fixed`) | Ticker 96px, Qty 104px, Avg cost 104px, Price 104px, P&L % 96px, P&L takes the remaining width (no pixel width declared) |
 
 Exceptions: the Phase 1 / 3 list (1px hairlines, 10px dot, 2px focus outline, 28px controls, 1.5px stroke) plus three chart-only items that are stroke or radius values, not spacing: 1.5px chart line stroke, 3px dot radius (live tail, tooltip active dot), 1px `surface` heatmap tile stroke. Chart margins are `{ top: 8, right: 8, bottom: 0, left: 0 }`. Nothing else leaves the scale.
 
-Row-height budget at the 1280x720 minimum (panel heights 268 / 214 / 182 including the 32px title strip, bodies 236 / 182 / 150):
+Derived from the 1280px grid (Phase 3 decision D-01), not declared values and not part of the fixed-dimension table above: at the 1280x720 minimum the panel heights are 268 / 214 / 182 including the 32px title strip, giving bodies of 236 / 182 / 150, and the panel widths are 206 / 413 / 638 / 959 (Heatmap / Chart and P&L / Positions / center column). Buy and Sell are about 99px each in the 224px Trade panel (inner width less 8px gap, halved), a derived consequence of `flex-1`. The budget below is derived from these figures:
 
-| Panel | Body | Contents |
+| Panel (derived width) | Body (derived) | Contents |
 |-------|------|----------|
 | Chart (413 wide) | 236px | caption strip 28 + chart 208 |
 | Trade (224 wide) | 236px | inputs, buttons, estimate row, one message (about 190px); a second message line scrolls inside the panel |
@@ -190,7 +190,7 @@ Applicable state considerations resolved: 30 explicit (table below), 4 backstop 
 | loading | trade bar | ✅ covered | While `POST /api/portfolio/trade` is in flight both Buy and Sell are disabled (`opacity-50 cursor-not-allowed`), the form has `aria-busy="true"`, labels stay `Buy` / `Sell`, and a second click is ignored |
 | empty | trade bar | ✅ covered | Buy and Sell are disabled while the trimmed ticker is empty or the quantity is not a finite number above zero; `Est. value` shows `--` |
 | error | trade bar | ✅ covered | A rejected trade shows the backend text in `trade-error` (`role="alert"`, `break-words`), inputs keep their values, the error clears on the next attempt, on success, and when either field is edited or the selection changes the ticker |
-| long-text | trade error | ✅ covered | The backend echoes the typed value (for example an unknown ticker); `break-words` wraps it inside the 222px panel; the panel body scrolls, never the page |
+| long-text | trade error | ✅ covered | The backend echoes the typed value (for example an unknown ticker); `break-words` wraps it inside the 224px Trade panel; the panel body scrolls, never the page |
 | partial | trade bar quantity | ✅ covered | Fractional input (`0.25`) is accepted; the field is `type="text" inputMode="decimal"` so it has no spinner or wheel stepping; `1e3` parses as 1000 and `Infinity` / `NaN` leave the buttons disabled |
 | success | trade bar | ✅ covered | On success the quantity is cleared, the ticker stays, the `Filled ...` line replaces any error, and focus moves to the quantity input |
 | keyboard | trade bar | ✅ covered | Pressing Enter in either input does NOT place a trade (two submit buttons would make Enter mean Buy). Buy and Sell are `type="button"` and the container is not a submitting form. |
@@ -221,7 +221,11 @@ Backstop considerations (user-confirmed items are verified visually at UAT, not 
 
 ## Layout Contract
 
-Unchanged from Phase 3 (1280px minimum, columns 320 / fluid / 224 / 320, row template `1.25fr / 1fr / 0.85fr`, `Panel` with `aria-labelledby`). Phase 4 fills these cells:
+Unchanged from Phase 3 (1280px minimum, columns 320 / fluid / 224 / 320, row template `1.25fr / 1fr / 0.85fr`, `Panel` with `aria-labelledby`).
+
+Primary focal point: the main chart in the top-center Chart panel (largest panel, primary-blue line, selected ticker named in its caption strip); everything else supports it.
+
+Phase 4 fills these cells:
 
 ```
 +--------------------------------------------------------------------------------+
@@ -249,7 +253,7 @@ Shared state placement (a layout-level contract, because several panels read the
 
 The Phase 3 store keeps a capped `price[]` per ticker with no times, so a time axis and a time tooltip cannot be drawn from it. Required store change (implementation by the planner, contract here):
 
-- Keep, per ticker, a capped series of `{ t, price }` where `t` is the frame `timestamp` in epoch milliseconds (frame value is Unix seconds, multiply by 1000). Expose it through a new hook next to `useTickerHistory` (for example `useTickerSeries`). `useTickerHistory` and the sparkline keep working from the same series (map to prices) so the Phase 3 sparkline is unchanged visually.
+- Keep, per ticker, a capped series of `{ t, price }` where `t` is the frame `timestamp` in epoch milliseconds (frame value is Unix seconds, multiply by 1000). Expose it through a new hook next to `useTickerHistory` (for example `useTickerSeries`). `useTickerHistory` and the sparkline keep working from the same series (map to prices). Required (closes IN-04): the sparkline slices to the last 300 points before drawing and before computing its first-vs-last color, so the Phase 3 sparkline is unchanged visually and its color does not depend on the larger window.
 - Raise `HISTORY_LIMIT` from 300 to 1,200 points (10 minutes at the 500 ms cadence). At 300 the main chart would silently cover only the last 2.5 minutes while captioned "Since page load".
 - Caption honesty rule (Chart caption strip, right side): `Since page load` while `series.length < HISTORY_LIMIT`; `Last 10 min` once the series is full.
 - `getEntry(ticker).openPrice` supplies the dashed `Open` reference line.
@@ -263,7 +267,7 @@ Applies to the existing `WatchlistRow` and `Watchlist` (Phase 3 anatomy unchange
 - `li` becomes interactive: `tabIndex={0}`, `onClick` selects, `onKeyDown` selects on Enter or Space (only when `event.target === event.currentTarget`, so a key press on the `×` button never selects), `cursor-pointer`, `hover:bg-surface/60`, `focus-visible:outline-2 outline-primary -outline-offset-2`.
 - `×` remove button: `onClick` calls `event.stopPropagation()` so removing a row does not select it (Phase 1 rule).
 - Selected row: `bg-surface`, ticker `text-accent font-semibold`, `aria-current="true"` on the `li`. Exactly one row is selected at a time. `aria-current` is the only non-visual signal needed.
-- Default selection: once the first `GET /api/watchlist` settles and nothing is selected, select the first ticker in list order. A fresh load therefore shows a populated chart and a prefilled trade ticker. (CONFIRM, D-01.)
+- Default selection: once the first `GET /api/watchlist` settles and nothing is selected, select the first ticker in list order. A fresh load therefore shows a populated chart and a prefilled trade ticker. (confirmed by user, D-01)
 - Selecting a ticker sets the Trade `Ticker` input to that ticker and updates `main-chart[data-ticker]` in the same render. Selection is one-way: typing a different ticker in the trade bar does NOT change the chart or the selection.
 - Row membership and `watchlist-row-*` testid rules are unchanged (exactly 10 on a fresh DB; no other id in the panel may share the prefix).
 
@@ -322,6 +326,7 @@ Panel `Positions` (wrapper testid `positions-table` unchanged). Body contents:
 
 - Table: `<table className="w-full table-fixed border-collapse">` with a `colgroup` using the fixed widths in the Spacing table. Head row: `thead` sticky `top-0 bg-panel`, 28px, cells `px-2`, Label style `text-muted`, `border-b border-line`, text columns left-aligned, numeric columns right-aligned. Body rows: `tr data-testid={testIds.positionRow(ticker)}`, 28px, `border-b border-line`, no zebra, **no hover fill and no click handler** (rows are not interactive this phase; see D-08).
 - Row sort: ticker ascending (stable while prices tick).
+- No row highlight in Phase 4: manual trades do not highlight rows, and the position row has no highlight prop or attribute. Phase 5 owns `data-ai-changed="true"` on `watchlist-row-{T}` and `position-row-{T}` and adds it to the row components itself (Phase 4 ships plain row components with no extra prop; this is the simplest option because Phase 5 already edits `WatchlistRow` and has the data). Keep the positions row as a small separate component (`PositionRow`) so that edit is local.
 - Cells, left to right:
 
 | Column | Value | Format and color |
@@ -360,7 +365,7 @@ Custom tile renderer (`content`):
 - Fill never uses a raw hex; the `rect` fill value is a `color-mix(...)` string over `var(--color-*)` tokens, or the equivalent inline style.
 - Tiles are not interactive (no click, no hover state beyond the native `<title>`).
 
-Spike gate (Research flag, do before building the panel): in Recharts 3.10.1 confirm (1) the custom renderer receives the extra data fields (`pnlFraction`, `marketValue`) or find them by `name`, (2) the first `svg rect` inside `[data-testid="heatmap"]` is a visible tile rect and not a `clipPath` / `defs` rect (the spec reads `.first()` and requires `toBeVisible()`), (3) the root node is suppressed, (4) `toContainText("JPM")` passes against `<text>` content. If (2) fails, wrap the Treemap so the first rect in DOM order is a tile.
+Planner gate (committed, blocking): the first task of the Heatmap plan is a spike, and no other heatmap task starts until it passes. In Recharts 3.10.1 confirm (1) the custom `content` renderer receives the extra data fields (`pnlFraction`, `marketValue`) or find them by `name`, (2) the first `svg rect` inside `[data-testid="heatmap"]` is a visible tile rect and not a `clipPath` / `defs` rect (the spec reads `.first()` and requires `toBeVisible()`), (3) the root node (`depth === 0`) is suppressed, (4) `toContainText("JPM")` passes against `<text>` content (tickers are in `<text>`). Record the result in the plan summary. If (2) fails, wrap the Treemap so the first rect in DOM order is a tile.
 
 ---
 
@@ -449,22 +454,22 @@ Changes to approved Phase 1 / Phase 3 contracts and to shipped code. Each is del
 | 5 | Phase 1: dollar P&L is "`formatCurrency` with the sign from the formatter" (positive shows no sign) | New `formatSignedCurrency` with an explicit `+` | Color must not be the only direction signal |
 | 6 | Phase 3: `WatchlistRow` change color comes from the unrounded value (WR-04) | Shared helper colors by the value after rounding; apply it to the watchlist change cell too | Closes open advisory WR-04 while adding the same logic to the new cells |
 | 7 | Phase 1 chart rule: heatmap tile "fill `up` or `down` with intensity scaled by P&L %" | Mix capped at 40% over `line` | Keeps `text` labels at 4.5:1 or better on the strongest tile |
-| 8 | Phase 1 `Panel`: only `testId` passthrough | No `Panel` change. `main-chart` and `data-ticker` live on an inner wrapper. | Avoids widening `Panel` for one data attribute |
+| 8 | Phase 1 `Panel`: only `testId` passthrough | No `Panel` change in Phase 4. `main-chart` and `data-ticker` live on an inner wrapper. Phase 5 (approved `05-UI-SPEC.md`) adds an additive optional `actions?: React.ReactNode` prop to `Panel` for its title-strip toggle; Phase 4 neither adds nor depends on it. | Avoids widening `Panel` for one data attribute |
 
 Open Phase 3 advisories that touch this phase:
 - WR-03 (`clearTicker` drops a held ticker's live price on watchlist remove): positions and heatmap now read live prices, so a removed-but-held ticker would fall back to the API price for at most one tick. Recommended fix in this phase: do not clear a ticker's entry when it is held. Not blocking.
-- IN-04 (sparkline color compares the first and last point of a sliding window): with the larger cap the window is 1,200 points. Recommended: the sparkline slices to the last 300 points so its look does not change.
+- IN-04 (sparkline color compares the first and last point of a sliding window): with the larger cap the window is 1,200 points. Committed requirement: the sparkline slices to the last 300 points (see "History window"). Not optional.
 
 ---
 
 ## Decision Log (confirm in review)
 
-No CONTEXT.md existed and no interactive channel was available. These were decided here with the recommended option. Items marked CONFIRM are the ones most worth the user's attention.
+No CONTEXT.md existed and no interactive channel was available, so these were decided here with the recommended option. D-01 and D-02 have since been confirmed by the user; the rest stand as recommended defaults.
 
 | ID | Decision | Rationale | Alternative |
 |----|----------|-----------|-------------|
-| D-01 CONFIRM | Select the first watchlist ticker by default; the Trade ticker is prefilled from it | A fresh load shows a populated chart and a ready trade bar; the spec only needs a row click to override | Start with no selection and a `Select a ticker from the watchlist.` chart (one extra click to see any chart) |
-| D-02 CONFIRM | Raise `HISTORY_LIMIT` to 1,200 and caption the chart `Since page load` until the window fills, then `Last 10 min` | At 300 points the chart is only the last 2.5 minutes while the requirement and caption say "since page load". Honest caption keeps both the memory and the claim bounded. | Keep 300 and caption it `Last 2.5 min` (smallest change, weaker vs TRADE-01); or uncapped history with chart-side downsampling (more code) |
+| D-01 (confirmed by user) | Select the first watchlist ticker by default; the Trade ticker is prefilled from it | A fresh load shows a populated chart and a ready trade bar; the spec only needs a row click to override | Start with no selection and a `Select a ticker from the watchlist.` chart (one extra click to see any chart) |
+| D-02 (confirmed by user) | Store keeps timestamped `{t, price}` points capped at `HISTORY_LIMIT` 1,200 (10 min); caption `Since page load` until full, then `Last 10 min`; the sparkline shows the last 300 | At 300 points the chart is only the last 2.5 minutes while the requirement and caption say "since page load". Honest caption keeps both the memory and the claim bounded. | Keep 300 and caption it `Last 2.5 min` (smallest change, weaker vs TRADE-01); or uncapped history with chart-side downsampling (more code) |
 | D-03 | Enter in a trade input does nothing; Buy and Sell are `type="button"` | With two submit buttons, Enter would mean Buy, which is a surprising money action | Enter submits Buy |
 | D-04 | Positions sort by ticker ascending | Rows stay put while prices tick at 2 Hz; sorting by value would reorder live | Sort by market value descending (matches the heatmap, jumpy) |
 | D-05 | Explicit `+` on positive dollar P&L via a new `formatSignedCurrency` | Direction is readable without color | Keep unsigned `formatCurrency` (Phase 1 wording) |
