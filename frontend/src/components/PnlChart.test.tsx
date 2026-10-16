@@ -16,7 +16,7 @@ const spanning = (count: number, stepMs: number): ValuePoint[] => {
 };
 
 const tickLabels = (container: HTMLElement) =>
-  [...container.querySelectorAll(".recharts-xAxis .recharts-cartesian-axis-tick-value")].map((el) => el.textContent);
+  [...container.querySelectorAll(".recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value")].map((el) => el.textContent);
 
 describe("PnlChart states", () => {
   it("shows the loading line in text-muted while history is null", () => {
