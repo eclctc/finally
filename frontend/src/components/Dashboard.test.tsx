@@ -1,7 +1,9 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/Dashboard";
 import { testIds } from "@/lib/testIds";
+import { jsonResponse, makePortfolio, makePosition, makeTradeResponse } from "@/test/fixtures";
 import type { FakeEventSource } from "../../vitest.setup";
 
 const Fake = globalThis.EventSource as unknown as typeof FakeEventSource;
@@ -16,6 +18,13 @@ const unpricedEntry = (ticker: string) => ({
   direction: null,
   timestamp: null,
 });
+
+/** Fetch stub routed by "METHOD /path"; anything unmapped never resolves. */
+const routeFetch = (routes: Record<string, (init?: RequestInit) => Response>) =>
+  vi.fn((path: string, init?: RequestInit) => {
+    const handler = routes[`${init?.method ?? "GET"} ${path}`];
+    return handler ? Promise.resolve(handler(init)) : new Promise(() => {});
+  });
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
@@ -109,5 +118,32 @@ describe("Dashboard", () => {
 
     unmount();
     expect(stream.readyState).toBe(2);
+  });
+
+  it("a Buy updates the header cash from the trade response", async () => {
+    const fetchMock = routeFetch({
+      "GET /api/portfolio": () => jsonResponse(makePortfolio(10000)),
+      "POST /api/portfolio/trade": () =>
+        jsonResponse(
+          makeTradeResponse(
+            { ticker: "MSFT", side: "buy", quantity: 2, price: 412.3 },
+            makePortfolio(9175.4, [makePosition("MSFT", 2, 412.3, 412.3)]),
+          ),
+        ),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance)).toHaveTextContent("$10,000.00"));
+
+    await user.type(screen.getByTestId(testIds.tradeTicker), "msft");
+    await user.type(screen.getByTestId(testIds.tradeQuantity), "2");
+    await user.click(screen.getByTestId(testIds.tradeBuy));
+
+    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance)).toHaveTextContent("$9,175.40"));
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST")!;
+    expect(JSON.parse(post[1]!.body as string)).toEqual({ ticker: "MSFT", side: "buy", quantity: 2 });
+    expect(post[1]!.headers).toMatchObject({ "Content-Type": "application/json" });
+    expect(fetchMock.mock.calls.filter(([path]) => path === "/api/portfolio")).toHaveLength(1);
   });
 });

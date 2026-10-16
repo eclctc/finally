@@ -2,10 +2,9 @@
 
 import { ConnectionDot } from "@/components/ConnectionDot";
 import { formatCurrency } from "@/lib/format";
-import { liveTotalValue } from "@/lib/portfolioValue";
+import { liveTotalValue, type Portfolio } from "@/lib/portfolioValue";
 import { getEntry } from "@/lib/priceStore";
 import { testIds } from "@/lib/testIds";
-import { usePortfolio } from "@/lib/usePortfolio";
 import { usePriceVersion } from "@/lib/usePrice";
 
 const show = (n?: number) => (n === undefined ? "--" : formatCurrency(n));
@@ -19,9 +18,8 @@ function Figure({ label, children }: { label: string; children: React.ReactNode 
   );
 }
 
-/** Top bar: brand, live portfolio value, cash from the backend, and stream status. */
-export function Header() {
-  const { portfolio, failed } = usePortfolio();
+/** Top bar: brand, live portfolio value, cash from the shared portfolio, and stream status. */
+export function Header({ portfolio, failed }: { portfolio: Portfolio | null; failed: boolean }) {
   usePriceVersion();
   const total = portfolio ? liveTotalValue(portfolio, (ticker) => getEntry(ticker)?.price) : undefined;
 

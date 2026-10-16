@@ -1,12 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, request } from "./api";
+import { ApiError, errorMessage, request } from "./api";
 import { clearTicker, seedPrices, type FrameEntry } from "./priceStore";
-
-const NETWORK_ERROR = "Request failed. Try again.";
-
-const errorMessage = (err: unknown) => (err instanceof ApiError ? err.message : NETWORK_ERROR);
 
 /** Owns watchlist membership: ticker names in GET /api/watchlist order (null until the first load settles), plus add and remove. */
 export function useWatchlist() {
