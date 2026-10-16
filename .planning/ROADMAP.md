@@ -13,7 +13,7 @@ The backend (market data, SSE, portfolio, watchlist, chat, SQLite) already exist
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Walking Skeleton** - Next.js static export with dark theme, test harness and testid contract, built and served by the Docker container (completed 2026-10-16)
-- [ ] **Phase 2: Backend Hardening** - Chat and watchlist APIs fail cleanly with 502s, idempotent adds, per-action failures and action caps
+- [x] **Phase 2: Backend Hardening** - Chat and watchlist APIs fail cleanly with 502s, idempotent adds, per-action failures and action caps (completed 2026-10-16)
 - [ ] **Phase 3: Live Watchlist & Header** - One SSE price store drives the watchlist rows, flashes, sparklines, connection dot and live header totals
 - [ ] **Phase 4: Trading & Portfolio** - Ticker selection, main chart, trade bar, positions table, heatmap and P&L chart
 - [ ] **Phase 5: AI Chat** - Docked chat panel with inline action results, error handling and a refresh after AI actions
@@ -62,7 +62,7 @@ Plans:
   4. Removing a ticker and adding it back keeps its original session open price, so its daily change % does not reset.
   5. The backend pytest suite passes, with a new test that reproduces each fix, and the snapshot and chat history queries are backed by per-user, time-ordered indexes.
 
-**Plans**: 6/6 plans executed (1 gap-closure plan pending)
+**Plans**: 6/6 plans complete (1 gap-closure plan pending)
 
 Plans:
 **Wave 1**
@@ -157,7 +157,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 2 has no
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 4/4 | Complete    | 2026-10-16 |
-| 2. Backend Hardening | 6/6 | In Progress | - |
+| 2. Backend Hardening | 6/6 | Complete    | 2026-10-16 |
 | 3. Live Watchlist & Header | 0/TBD | Not started | - |
 | 4. Trading & Portfolio | 0/TBD | Not started | - |
 | 5. AI Chat | 0/TBD | Not started | - |

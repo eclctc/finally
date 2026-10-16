@@ -29,6 +29,11 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 - ✓ Tailwind 4 `@theme static` dark tokens (`#0d1117`/`#1a1a2e`, accent `#ecad0a`, blue `#209dd7`, purple `#753991`), system fonts, no third-party origins — Phase 1
 - ✓ Vitest + React Testing Library harness with ResizeObserver/EventSource/scrollIntoView stubs; shared `testIds`, `format`, `api` modules — Phase 1
 - ✓ `next dev` proxies `/api/*` to :8000 with unbuffered SSE (dev only) — Phase 1
+- ✓ Chat LLM failures (no choices, bad/non-finite content, timeout 30 s) return a fixed 502, never a 500; upstream detail logged only — Phase 2
+- ✓ Concurrent duplicate watchlist adds are idempotent (`ON CONFLICT DO NOTHING`) — Phase 2
+- ✓ Each chat action is its own savepoint unit; unexpected failures become `failed` actions; no write lock across the LLM call — Phase 2
+- ✓ Chat turn capped at 5 trades and 5 watchlist changes; overflow recorded as `failed` — Phase 2
+- ✓ Session open price survives ticker remove/re-add; per-user time-ordered indexes on snapshots and chat — Phase 2
 
 ### Active
 
@@ -45,13 +50,6 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 - [ ] Recharts for all charts
 - [ ] Frontend unit tests with Vitest + React Testing Library (harness in place since Phase 1; coverage grows per phase)
 - [ ] Layout keeps Chart and Heatmap usable at the 1024px minimum (UI review found ~68px cells; decide before Phase 3)
-
-**Backend hardening (from `.planning/codebase/CONCERNS.md`):**
-- [ ] Chat LLM path returns 502 (not 500) for empty or malformed LLM responses
-- [ ] Concurrent duplicate watchlist adds do not return 500 (treat as already watched)
-- [ ] Chat turn actions and the stored chat row stay consistent when a later action fails unexpectedly
-- [ ] Cap the number of trades and watchlist changes per chat turn
-- [ ] LLM 502 error body does not leak raw upstream error detail
 
 **Integration:**
 - [ ] `docker build` succeeds and `scripts/start_mac.sh` launches a working app at `http://localhost:8000`
@@ -95,6 +93,8 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 | TypeScript 7, no ESLint; Tailwind `@theme static` tokens; system font stack | Small toolchain, no third-party font origin | ✓ Good — Phase 1 typecheck/build clean, same-origin UAT passed |
 | `output: 'export'` only outside dev, with a dev-only `/api` rewrite | Static export forbids rewrites; dev still needs same-origin API | ✓ Good — Phase 1 |
 | Exact npm pins, committed lockfile, `npm ci` in Docker | Supply-chain control for the too-new package set | ✓ Good — Phase 1 security review |
+| Per-action committed savepoints, not one transaction per chat turn | Keeps awaits (Massive lookup, LLM) outside transactions | ✓ Good — Phase 2; residual: a failing final chat-row insert leaves actions unrecorded (WR-03, open) |
+| Non-finite LLM quantity rejects the whole reply (502) | Matches HARD-01 "unusable output"; reversible one-line choice | ✓ Good — Phase 2 gap closure |
 
 ## Evolution
 
@@ -114,4 +114,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-16 after Phase 1*
+*Last updated: 2026-10-16 after Phase 2*

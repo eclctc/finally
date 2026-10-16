@@ -1,19 +1,19 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 02
-current_phase_name: Backend Hardening
-status: executing
-stopped_at: Phase 1 complete, ready to plan Phase 2
-last_updated: "2026-10-16T18:00:51.824Z"
+current_phase: 3
+current_phase_name: Live Watchlist & Header
+status: planning
+stopped_at: Phase 02 complete, ready to plan Phase 3
+last_updated: "2026-10-16T18:12:27.694Z"
 last_activity: 2026-10-16
-last_activity_desc: Phase 02 execution started
-state_head: 9212a832131a83712acbb13c8d62c1b2df404a71
+last_activity_desc: Phase 02 complete, transitioned to Phase 3
+state_head: ee379a1becddaa5809d9530fbee634a476334178
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
-  completed_plans: 4
-  percent: 17
+  completed_plans: 10
+  percent: 33
 ---
 
 # Project State
@@ -27,17 +27,17 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 02 (Backend Hardening) — READY TO EXECUTE
-Plan: 1 of 5
-Status: Ready to execute
-Last activity: 2026-10-16 — Phase 02 execution started
+Phase: 3 — Live Watchlist & Header
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-16 — Phase 02 complete, transitioned to Phase 3
 
-Progress: [██░░░░░░░░] 17%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 10
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -46,6 +46,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 4 | - | - |
+| 02 | 6 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -64,6 +65,7 @@ Recent decisions affecting current work:
 - [Roadmap]: TypeScript 7 with no ESLint (typescript-eslint does not support TS 7).
 - [Roadmap]: Chat transcript is session-only in v1. `GET /api/chat` is deferred to v2 (CHAT-V2-01).
 - [Roadmap]: The P&L history is downsampled on the client to about 300 points. Server-side bucketing is deferred to v2 (DATA-V2-01).
+- [Phase 2]: Backend hardened: fixed-message 502s, savepoint-per-action chat, 5-per-kind cap, open price kept on re-add. 145 backend tests.
 - [Phase 1]: Frontend tooling settled: Next 16 static export (dev-only `/api` rewrite), Tailwind 4 `@theme static`, system fonts, exact npm pins + `npm ci`.
 - [Roadmap]: The connection dot shows disconnected only when `EventSource` is CLOSED, and the stream is then recreated (confirm in the Phase 3 spike).
 
@@ -73,9 +75,10 @@ None yet.
 
 ### Blockers/Concerns
 
+- [Phase 2]: Open code-review advisories WR-01..WR-03, IN-01..IN-03 in 02-REVIEW-DISPOSITION.md (non-blocking).
+
 - [Phase 1 → 3]: UI review: Chart and Heatmap cells collapse to ~68px at the 1024px minimum width; resolve layout before Phase 3 builds the chart (01-UI-REVIEW.md).
 - [Phase 1]: Open code-review warnings WR-01 (`cents()` rounding), WR-02 (connection dot a11y), WR-03 (vacuous testid parity test); plus missing `color-scheme: dark`. Fix via `/gsd-code-review 01 --fix` or fold into Phase 3.
-- [Phase 2]: `execute_trade`'s `with conn:` commits, so chat atomicity needs per-action SAVEPOINTs opened after the LLM returns. Write a failing test first.
 - [Phase 3]: The `EventSource` CLOSED path (non-200 response) is unverified. Spike it against `sse-reconnect.spec.ts`.
 - [Phase 4]: Recharts 3 Treemap must render `<rect>` with labels (the default renders `<path>`). Spike it against `portfolio-charts.spec.ts`.
 
@@ -90,5 +93,5 @@ Items acknowledged and deferred at milestone close, most recent first:
 ## Session Continuity
 
 Last session: 2026-10-16T15:40:00Z
-Stopped at: Phase 1 complete, ready to plan Phase 2
+Stopped at: Phase 2 complete, ready to plan Phase 3
 Resume file: None

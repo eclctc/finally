@@ -18,14 +18,14 @@ The backend already exists. See PROJECT.md "Validated" for the existing capabili
 
 ### Backend Hardening
 
-- [ ] **HARD-01**: `POST /api/chat` returns 502 `{"error": ...}`, not 500, when the LLM returns no choices, empty content or unparseable content.
-- [ ] **HARD-02**: The 502 error body uses a fixed public message and the full upstream error is logged server-side. The actionable missing-API-key message is kept.
-- [ ] **HARD-03**: The LLM call has a request timeout. When it times out, the user gets a 502.
-- [ ] **HARD-04**: Concurrent adds of the same ticker never return 500. A duplicate is treated as already watched.
-- [ ] **HARD-05**: In a chat turn, an unexpected failure in one action is recorded as a `failed` action. It does not abort the turn. Every executed action is reflected in the stored chat message, and the DB write lock is not held across the LLM call.
-- [ ] **HARD-06**: Each chat turn is capped at 5 trades and 5 watchlist changes. Items over the cap are recorded as `failed` actions with a reason, and the reply is not rejected.
-- [ ] **HARD-07**: Removing and then re-adding a ticker keeps its original session open price, so its daily change % is not reset.
-- [ ] **HARD-08**: Indexes exist on `portfolio_snapshots` and `chat_messages` for their per-user, time-ordered queries.
+- [x] **HARD-01**: `POST /api/chat` returns 502 `{"error": ...}`, not 500, when the LLM returns no choices, empty content or unparseable content.
+- [x] **HARD-02**: The 502 error body uses a fixed public message and the full upstream error is logged server-side. The actionable missing-API-key message is kept.
+- [x] **HARD-03**: The LLM call has a request timeout. When it times out, the user gets a 502.
+- [x] **HARD-04**: Concurrent adds of the same ticker never return 500. A duplicate is treated as already watched.
+- [x] **HARD-05**: In a chat turn, an unexpected failure in one action is recorded as a `failed` action. It does not abort the turn. Every executed action is reflected in the stored chat message, and the DB write lock is not held across the LLM call.
+- [x] **HARD-06**: Each chat turn is capped at 5 trades and 5 watchlist changes. Items over the cap are recorded as `failed` actions with a reason, and the reply is not rejected.
+- [x] **HARD-07**: Removing and then re-adding a ticker keeps its original session open price, so its daily change % is not reset.
+- [x] **HARD-08**: Indexes exist on `portfolio_snapshots` and `chat_messages` for their per-user, time-ordered queries.
 
 ### Live Market Data UI
 
@@ -67,7 +67,7 @@ The backend already exists. See PROJECT.md "Validated" for the existing capabili
 - [ ] **INT-01**: The frontend has Vitest + RTL tests for the price store and merge logic, flash triggering, watchlist add/remove, portfolio revaluation math and chat rendering and loading state.
 - [ ] **INT-02**: `scripts/start_mac.sh` builds and launches a working app at `http://localhost:8000` and opens the browser.
 - [ ] **INT-03**: The full Playwright E2E suite in `test/` passes against the container with `LLM_MOCK=true`. It covers fresh start, watchlist, trading, portfolio charts, chat and SSE reconnect.
-- [ ] **INT-04**: The backend pytest suite passes, including new tests that reproduce each hardening fix.
+- [x] **INT-04**: The backend pytest suite passes, including new tests that reproduce each hardening fix.
 
 ## v2 Requirements
 
@@ -112,14 +112,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-04 | Phase 1 | Complete |
 | FND-05 | Phase 1 | Complete |
 | FND-06 | Phase 1 | Complete |
-| HARD-01 | Phase 2 | Pending |
-| HARD-02 | Phase 2 | Pending |
-| HARD-03 | Phase 2 | Pending |
-| HARD-04 | Phase 2 | Pending |
-| HARD-05 | Phase 2 | Pending |
-| HARD-06 | Phase 2 | Pending |
-| HARD-07 | Phase 2 | Pending |
-| HARD-08 | Phase 2 | Pending |
+| HARD-01 | Phase 2 | Complete |
+| HARD-02 | Phase 2 | Complete |
+| HARD-03 | Phase 2 | Complete |
+| HARD-04 | Phase 2 | Complete |
+| HARD-05 | Phase 2 | Complete |
+| HARD-06 | Phase 2 | Complete |
+| HARD-07 | Phase 2 | Complete |
+| HARD-08 | Phase 2 | Complete |
 | LIVE-01 | Phase 3 | Pending |
 | LIVE-02 | Phase 3 | Pending |
 | LIVE-03 | Phase 3 | Pending |
@@ -146,7 +146,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INT-01 | Phase 6 | Pending |
 | INT-02 | Phase 6 | Pending |
 | INT-03 | Phase 6 | Pending |
-| INT-04 | Phase 2 | Pending |
+| INT-04 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 41 total

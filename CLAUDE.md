@@ -8,7 +8,7 @@ The key document is PLAN.md included in full below; the market data component ha
 
 The build is run through GSD. Planning artifacts live in `.planning/` (PROJECT.md, REQUIREMENTS.md with 41 v1 requirements, ROADMAP.md with 6 phases, STATE.md, research/, phases/).
 
-- Backend (`backend/`) is complete (103 pytest tests pass). It is kept and will be hardened in Phase 2.
+- Backend (`backend/`) is complete and hardened in Phase 2 (145 pytest tests pass).
 - Frontend (`frontend/`) is being built fresh. The old frontend at commit `5681c3a` is reference only.
 - Key decisions: TypeScript 7 with no ESLint; chat history session-only; P&L history downsampled on the client; no cloud deploy, Docker hardening or root repo cleanup.
 
@@ -22,7 +22,9 @@ Phase 1 (Walking Skeleton) status: COMPLETE (UAT 3/3 passed, security 12/12 thre
 - Verifier: 5/5 must-haves, status `human_needed`. Three manual checks are in `01-UAT.md` (browser look at :8000, same-origin requests, no pure black).
 - Code review: 0 critical, 3 warnings (WR-01 rounding in `format.ts`, WR-02 connection dot a11y, WR-03 testid parity test can pass vacuously), 5 info; all open.
 
-Next steps: `/gsd-verify-work 01`, then `/gsd-secure-phase 1` (needed before advancing), optionally `/gsd-validate-phase 1`, `/gsd-ui-review 1`, `/gsd-code-review 01 --fix`. Phase 2 can be planned in parallel with `/gsd-plan-phase 2`.
+Phase 2 (Backend Hardening) status: COMPLETE (6 plans incl. gap closure 02-06; verification 5/5 passed; security 16/16 threats closed). LLM failures return fixed 502s (incl. non-finite quantities), duplicate watchlist adds are idempotent, each chat action is a savepoint unit with a 5-per-kind cap, session open survives re-add, history/chat queries are indexed. Open non-blocking review advisories: WR-01..WR-03, IN-01..IN-03 (`.planning/phases/02-backend-hardening/02-REVIEW-DISPOSITION.md`).
+
+Next steps: `/gsd-ui-phase 3` (UI design contract; must fix the 1024px Chart/Heatmap squeeze from 01-UI-REVIEW.md), then `/gsd-plan-phase 3`. Phase 4 depends on Phase 3; plan it after Phase 3 plans are fixed. Optional: `/gsd-code-review 01 --fix` / `02 --fix`, `/gsd-validate-phase 2`, `/gsd-map-codebase --paths README.md,backend` (map is stale).
 
 Environment notes: the root `.gitignore` has a Python `lib/` rule, overridden by `!/src/lib/` in `frontend/.gitignore`. The shell `grep` may be ugrep; use `/usr/bin/grep` for GNU flags. Run post-merge checks with `npm --prefix frontend test|run typecheck|run build` and `cd backend && uv run pytest`, not the auto-detected root `pyproject.toml`.
 
