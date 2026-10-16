@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { ConnectionDot } from "@/components/ConnectionDot";
-import { request } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
+import { liveTotalValue } from "@/lib/portfolioValue";
+import { getEntry } from "@/lib/priceStore";
 import { testIds } from "@/lib/testIds";
-
-interface PortfolioSummary {
-  cash_balance: number;
-  total_value: number;
-}
+import { usePortfolio } from "@/lib/usePortfolio";
+import { usePriceVersion } from "@/lib/usePrice";
 
 const show = (n?: number) => (n === undefined ? "--" : formatCurrency(n));
 
@@ -22,16 +19,11 @@ function Figure({ label, children }: { label: string; children: React.ReactNode 
   );
 }
 
-/** Top bar: brand, portfolio value and cash from the backend, and stream status. */
+/** Top bar: brand, live portfolio value, cash from the backend, and stream status. */
 export function Header() {
-  const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    request<PortfolioSummary>("/api/portfolio")
-      .then(setPortfolio)
-      .catch(() => setFailed(true));
-  }, []);
+  const { portfolio, failed } = usePortfolio();
+  usePriceVersion();
+  const total = portfolio ? liveTotalValue(portfolio, (ticker) => getEntry(ticker)?.price) : undefined;
 
   return (
     <header className="flex h-14 shrink-0 items-center border-b border-line bg-panel px-4">
@@ -46,7 +38,7 @@ export function Header() {
         )}
         <Figure label="Portfolio value">
           <span data-testid={testIds.totalValue} className="figures whitespace-nowrap text-xl leading-tight text-accent">
-            {show(portfolio?.total_value)}
+            {show(total)}
           </span>
         </Figure>
         <Figure label="Cash">
