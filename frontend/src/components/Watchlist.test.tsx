@@ -1,8 +1,8 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Watchlist } from "@/components/Watchlist";
-import { getHistory, mergeFrame } from "@/lib/priceStore";
+import { EMPTY_HISTORY, getEntry, getHistory, mergeFrame } from "@/lib/priceStore";
 import { testIds } from "@/lib/testIds";
 import { jsonResponse, makeFrame, makeFrameEntry, makeWatchlistEntry } from "@/test/fixtures";
 
@@ -170,17 +170,24 @@ const POST_INIT = (ticker: string) => ({
   body: JSON.stringify({ ticker }),
 });
 
-/** Fetch stub: GET /api/watchlist serves the mutable list; POST runs the handler (default: add the ticker). */
-const stubApi = (list: WatchlistEntry[], onPost?: PostHandler) => {
+/**
+ * Fetch stub: GET /api/watchlist serves the mutable list; POST and DELETE run their handlers
+ * (defaults: add the ticker, drop the ticker).
+ */
+const stubApi = (list: WatchlistEntry[], onPost?: PostHandler, onDelete?: PostHandler) => {
   const addToList: PostHandler = (ticker) => {
     list.push(makeWatchlistEntry(ticker));
     return Promise.resolve(jsonResponse({ ticker }));
   };
-  const fetchMock = vi.fn((_path: string, init?: RequestInit) =>
-    init?.method === "POST"
-      ? (onPost ?? addToList)(JSON.parse(init.body as string).ticker)
-      : Promise.resolve(jsonResponse({ tickers: list })),
-  );
+  const dropFromList: PostHandler = (ticker) => {
+    list.splice(list.findIndex((entry) => entry.ticker === ticker), 1);
+    return Promise.resolve(jsonResponse({ ticker }));
+  };
+  const fetchMock = vi.fn((path: string, init?: RequestInit) => {
+    if (init?.method === "POST") return (onPost ?? addToList)(JSON.parse(init.body as string).ticker);
+    if (init?.method === "DELETE") return (onDelete ?? dropFromList)(decodeURIComponent(path.split("/").pop()!));
+    return Promise.resolve(jsonResponse({ tickers: list }));
+  });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 };
@@ -342,5 +349,115 @@ describe("Watchlist add form", () => {
     await screen.findByTestId(testIds.watchlistRow("DIS"));
     expect(priceCell("AAPL")).toHaveTextContent(/^200\.00$/);
     expect(getHistory("AAPL")).toHaveLength(historyLength);
+  });
+});
+
+describe("Watchlist remove", () => {
+  const removeButton = (ticker: string) => screen.getByTestId(testIds.watchlistRemove(ticker));
+
+  const watchApiList = async (
+    onDelete?: PostHandler,
+    list = [makeWatchlistEntry("AAPL", 190), makeWatchlistEntry("MSFT", 410)],
+  ) => {
+    const fetchMock = stubApi(list, undefined, onDelete);
+    render(<Watchlist />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    fetchMock.mockClear();
+    return fetchMock;
+  };
+
+  it("gives each row a labelled x button as its last cell", async () => {
+    await watchApiList();
+    const button = removeButton("AAPL");
+    expect(button).toHaveTextContent(/^×$/);
+    expect(button).toHaveAttribute("aria-label", "Remove AAPL");
+    expect(button).toHaveAttribute("title", "Remove AAPL");
+    expect(button).toHaveClass("size-6", "text-muted", "hover:text-down");
+  });
+
+  it("deletes, reloads, then drops the row, its store entry and history, and focuses the input", async () => {
+    const fetchMock = await watchApiList();
+    streamTick("AAPL", 191, 190);
+    await userEvent.setup().click(removeButton("AAPL"));
+    await waitFor(() => expect(screen.queryByTestId(testIds.watchlistRow("AAPL"))).toBeNull());
+    expect(fetchMock.mock.calls).toEqual([
+      ["/api/watchlist/AAPL", { method: "DELETE" }],
+      ["/api/watchlist", undefined],
+    ]);
+    expect(screen.getByTestId(testIds.watchlistRow("MSFT"))).toBeInTheDocument();
+    expect(getEntry("AAPL")).toBeUndefined();
+    expect(getHistory("AAPL")).toBe(EMPTY_HISTORY);
+    expect(addInput()).toHaveFocus();
+  });
+
+  it("disables the x with opacity while its DELETE is pending and sends one DELETE", async () => {
+    const fetchMock = await watchApiList(() => new Promise(() => {}));
+    const user = userEvent.setup();
+    await user.click(removeButton("AAPL"));
+    await user.click(removeButton("AAPL"));
+    expect(removeButton("AAPL")).toBeDisabled();
+    expect(removeButton("AAPL")).toHaveClass("disabled:opacity-50");
+    expect(removeButton("MSFT")).toBeEnabled();
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "DELETE")).toHaveLength(1);
+  });
+
+  it("treats a 404 as already removed: no alert, and the reload drops the row", async () => {
+    const list = [makeWatchlistEntry("AAPL", 190), makeWatchlistEntry("MSFT", 410)];
+    await watchApiList((ticker) => {
+      list.splice(list.findIndex((entry) => entry.ticker === ticker), 1);
+      return Promise.resolve(jsonResponse({ error: `${ticker} is not on the watchlist` }, 404));
+    }, list);
+    await userEvent.setup().click(removeButton("AAPL"));
+    await waitFor(() => expect(screen.queryByTestId(testIds.watchlistRow("AAPL"))).toBeNull());
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(getEntry("AAPL")).toBeUndefined();
+  });
+
+  it("shows another failure in the add-error slot and keeps the row", async () => {
+    await watchApiList(() => Promise.resolve(jsonResponse({ error: "Market data unavailable, try again" }, 500)));
+    await userEvent.setup().click(removeButton("AAPL"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Market data unavailable, try again");
+    expect(screen.getByTestId(testIds.watchlistRow("AAPL"))).toBeInTheDocument();
+    expect(removeButton("AAPL")).toBeEnabled();
+  });
+
+  it("shows the network-failure copy when the DELETE rejects", async () => {
+    await watchApiList(() => Promise.reject(new TypeError("Failed to fetch")));
+    await userEvent.setup().click(removeButton("AAPL"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Request failed. Try again.");
+  });
+
+  it("encodes the ticker in the DELETE path", async () => {
+    const fetchMock = await watchApiList(undefined, [
+      makeWatchlistEntry("AAPL", 190),
+      makeWatchlistEntry("A/B", 10),
+    ]);
+    await userEvent.setup().click(removeButton("A/B"));
+    await waitFor(() => expect(screen.queryByTestId(testIds.watchlistRow("A/B"))).toBeNull());
+    expect(fetchMock.mock.calls[0]).toEqual(["/api/watchlist/A%2FB", { method: "DELETE" }]);
+  });
+
+  it("does not scroll again after a remove reloads the list", async () => {
+    await watchApiList();
+    const user = userEvent.setup();
+    await user.type(addInput(), "dis{Enter}");
+    await screen.findByTestId(testIds.watchlistRow("DIS"));
+    scrollMock().mockClear();
+    await user.click(removeButton("MSFT"));
+    await waitFor(() => expect(screen.queryByTestId(testIds.watchlistRow("MSFT"))).toBeNull());
+    expect(scrollMock()).not.toHaveBeenCalled();
+  });
+
+  it("orders the row cells ticker, price, change, sparkline, remove", async () => {
+    await watchApiList();
+    streamTick("AAPL", 195, 190);
+    const cells = [...screen.getByTestId(testIds.watchlistRow("AAPL")).children];
+    expect(cells).toHaveLength(5);
+    expect(cells[0]).toHaveTextContent(/^AAPL$/);
+    expect(cells[1]).toBe(priceCell("AAPL"));
+    expect(cells[1]).toHaveAttribute("data-flash", "up");
+    expect(cells[2]).toBe(changeCell("AAPL"));
+    expect(cells[3]).toHaveAttribute("title", "Since page load");
+    expect(cells[4]).toBe(removeButton("AAPL"));
   });
 });
