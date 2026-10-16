@@ -2,6 +2,7 @@ import json
 from types import SimpleNamespace
 
 import pytest
+from litellm.exceptions import Timeout
 
 from app.chat import llm
 from app.chat.llm import LLMError, generate_reply, parse_reply
@@ -45,8 +46,15 @@ def test_parse_empty_arrays():
     ],
 )
 def test_parse_malformed_raises(content):
-    with pytest.raises(LLMError):
+    with pytest.raises(LLMError) as excinfo:
         parse_reply(content)
+    assert str(excinfo.value) == llm.BAD_REPLY_ERROR
+
+
+def test_schema_error_does_not_echo_model_output():
+    with pytest.raises(LLMError) as excinfo:
+        parse_reply('{"message": "SECRETOUT"}')
+    assert "SECRETOUT" not in str(excinfo.value)
 
 
 @pytest.mark.parametrize(
@@ -85,17 +93,52 @@ async def test_request_reply_parses_model_output(monkeypatch):
     assert reply.message == "Bought."
     assert captured["model"] == llm.MODEL
     assert captured["extra_body"] == llm.EXTRA_BODY
+    assert captured["timeout"] == llm.TIMEOUT_SECONDS
 
 
-async def test_request_failure_raises_llm_error(monkeypatch):
+@pytest.mark.parametrize("upstream_text", ["upstream down", ""])
+async def test_request_failure_raises_llm_error(monkeypatch, upstream_text):
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
 
     async def failing_completion(**kwargs):
-        raise RuntimeError("upstream down")
+        raise RuntimeError(upstream_text)
 
     monkeypatch.setattr(llm, "acompletion", failing_completion)
-    with pytest.raises(LLMError, match="upstream down"):
+    with pytest.raises(LLMError) as excinfo:
         await llm.request_reply([])
+    assert str(excinfo.value) == llm.UPSTREAM_ERROR
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        SimpleNamespace(choices=[]),
+        SimpleNamespace(choices=None),
+        SimpleNamespace(choices=[SimpleNamespace(message=None)]),
+    ],
+)
+async def test_missing_choices_raise_llm_error(monkeypatch, response):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+
+    async def empty_completion(**kwargs):
+        return response
+
+    monkeypatch.setattr(llm, "acompletion", empty_completion)
+    with pytest.raises(LLMError) as excinfo:
+        await llm.request_reply([])
+    assert str(excinfo.value) == llm.UPSTREAM_ERROR
+
+
+async def test_timeout_raises_timeout_error(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+
+    async def slow_completion(**kwargs):
+        raise Timeout(message="slow", model=llm.MODEL, llm_provider="openrouter")
+
+    monkeypatch.setattr(llm, "acompletion", slow_completion)
+    with pytest.raises(LLMError) as excinfo:
+        await llm.request_reply([])
+    assert str(excinfo.value) == llm.TIMEOUT_ERROR
 
 
 async def test_missing_api_key_raises(monkeypatch):
