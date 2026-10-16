@@ -94,7 +94,7 @@ Research flag: prove the transaction boundary with a failing test first. `execut
   4. The header connection dot is green when connected and yellow while reconnecting. It turns red only when the stream is closed, and it returns to green once the stream is recreated. The header also shows the cash balance (`10000` on a fresh DB) and a live total portfolio value.
   5. The user can add a ticker (input is uppercased, and an invalid symbol shows the 400 error inline) and remove a ticker, and the watchlist updates without a reload.
 
-**Plans**: 4/5 plans executed
+**Plans**: 5/5 plans executed
 
 Plans:
 **Wave 1**
@@ -106,7 +106,7 @@ Plans:
 - [x] 03-04-PLAN.md — Watchlist loading/failed/empty states via useWatchlist; 1280px layout, named panel regions, color-scheme dark (LIVE-03)
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 03-05-PLAN.md — Add and remove tickers in place; rebuilt container on :8010 passes fresh-start, sse-reconnect and watchlist add/remove; browser UAT (LIVE-06, LIVE-07, phase gate)
+- [x] 03-05-PLAN.md — Add and remove tickers in place; rebuilt container on :8010 passes fresh-start, sse-reconnect and watchlist add/remove; browser UAT (LIVE-06, LIVE-07, phase gate)
 
 **UI hint**: yes
 
@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 2 has no
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 4/4 | Complete    | 2026-10-16 |
 | 2. Backend Hardening | 6/6 | Complete    | 2026-10-16 |
-| 3. Live Watchlist & Header | 4/5 | In Progress | - |
+| 3. Live Watchlist & Header | 5/5 | In Progress | - |
 | 4. Trading & Portfolio | 0/TBD | Not started | - |
 | 5. AI Chat | 0/TBD | Not started | - |
 | 6. Ship & E2E Gate | 0/TBD | Not started | - |
