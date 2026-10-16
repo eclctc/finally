@@ -2,9 +2,10 @@
 
 import { useRef, useState } from "react";
 import { errorMessage, request } from "@/lib/api";
-import { formatPrice, formatQuantity } from "@/lib/format";
+import { formatCurrency, formatPrice, formatQuantity } from "@/lib/format";
 import type { Portfolio } from "@/lib/portfolioValue";
 import { testIds } from "@/lib/testIds";
+import { useTickerPrice } from "@/lib/usePrice";
 
 interface ExecutedTrade {
   id: string;
@@ -34,6 +35,12 @@ export function TradeBar({ onFilled }: { onFilled: (portfolio: Portfolio) => voi
   const [inFlight, setInFlight] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
   const quantityRef = useRef<HTMLInputElement>(null);
+  const livePrice = useTickerPrice(ticker.trim());
+
+  const amount = Number(quantity);
+  const validQuantity = Number.isFinite(amount) && amount > 0;
+  const canTrade = !inFlight && ticker.trim() !== "" && validQuantity;
+  const estimate = livePrice && validQuantity ? formatCurrency(amount * livePrice.price) : "--";
 
   async function submit(side: "buy" | "sell") {
     setInFlight(true);
@@ -59,11 +66,14 @@ export function TradeBar({ onFilled }: { onFilled: (portfolio: Portfolio) => voi
   }
 
   return (
-    <div role="group" aria-label="Trade order" className="flex flex-col gap-2 p-2">
+    <div role="group" aria-label="Trade order" aria-busy={inFlight ? true : undefined} className="flex flex-col gap-2 p-2">
       <input
         data-testid={testIds.tradeTicker}
         value={ticker}
-        onChange={(event) => setTicker(event.target.value.toUpperCase())}
+        onChange={(event) => {
+          setTicker(event.target.value.toUpperCase());
+          setMessage(null);
+        }}
         placeholder="Ticker"
         aria-label="Ticker to trade"
         autoComplete="off"
@@ -77,18 +87,25 @@ export function TradeBar({ onFilled }: { onFilled: (portfolio: Portfolio) => voi
         type="text"
         inputMode="decimal"
         value={quantity}
-        onChange={(event) => setQuantity(event.target.value)}
+        onChange={(event) => {
+          setQuantity(event.target.value);
+          setMessage(null);
+        }}
         placeholder="Quantity"
         aria-label="Quantity"
         className={`${INPUT_CLASS} figures text-right`}
       />
       <div className="flex gap-2">
-        <button type="button" data-testid={testIds.tradeBuy} disabled={inFlight} onClick={() => submit("buy")} className={BUTTON_CLASS}>
+        <button type="button" data-testid={testIds.tradeBuy} disabled={!canTrade} onClick={() => submit("buy")} className={BUTTON_CLASS}>
           Buy
         </button>
-        <button type="button" data-testid={testIds.tradeSell} disabled={inFlight} onClick={() => submit("sell")} className={BUTTON_CLASS}>
+        <button type="button" data-testid={testIds.tradeSell} disabled={!canTrade} onClick={() => submit("sell")} className={BUTTON_CLASS}>
           Sell
         </button>
+      </div>
+      <div className="flex items-baseline justify-between">
+        <span className="text-[11px] text-muted">Est. value</span>
+        <span className="figures whitespace-nowrap text-text">{estimate}</span>
       </div>
       {message?.kind === "error" && (
         <p data-testid={testIds.tradeError} role="alert" className="break-words text-down">
