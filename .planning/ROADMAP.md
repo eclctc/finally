@@ -125,7 +125,28 @@ Research flag: spike the `EventSource` CLOSED path (non-200 response) against `t
   4. The heatmap shows each position as a labeled rectangle sized by market value and colored green or red by P&L, and it shows an empty state when there are no positions.
   5. The P&L chart plots total value over time (downsampled to about 300 points) with tooltips, a $10,000 baseline and a live tail point. History and portfolio refresh every 30 seconds.
 
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+**Wave 1**
+- [ ] 04-01-PLAN.md — Tracer: portfolio lifted into Dashboard; trade bar buys and sells and the header updates from the trade response; 30 s poll with a stale-response guard (TRADE-03, TRADE-04, TRADE-05, PORT-04)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 04-02-PLAN.md — Selectable watchlist rows drive main-chart data-ticker and the trade ticker; default and fallback selection; prefill never clobbers typed text; WR-04 color rule (TRADE-01, TRADE-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 04-03-PLAN.md — Store keeps 1,200 timestamped points; main chart line, caption, axes, Open line and tooltip; sparkline last 300 (TRADE-01)
+- [ ] 04-04-PLAN.md — Blocking Treemap rect spike first, then the heatmap of live-valued, P&L-colored tiles with states (PORT-02)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 04-05-PLAN.md — Live positions table: rows appear and disappear with trades, sorted, sticky head, signed P&L colors (PORT-01, TRADE-05)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 04-06-PLAN.md — History lifted with a 30 s poll; P&L line downsampled to 300 with a $10,000 baseline, live tail and tooltip; trades refresh history (PORT-03, PORT-04, TRADE-05)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 04-07-PLAN.md — Phase gate: rebuilt container passes the Phase 4 E2E set on a fresh database; backend suite; browser UAT (all Phase 4 requirements)
+
 **UI hint**: yes
 
 Research flag: spike the Recharts 3 Treemap custom `content` renderer first. It must render `<rect>` (the default renders `<path>`) and always emit ticker labels, to satisfy the `svg rect` and `path.recharts-curve` selectors in `test/tests/portfolio-charts.spec.ts`.
@@ -172,6 +193,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 2 has no
 | 1. Walking Skeleton | 4/4 | Complete    | 2026-10-16 |
 | 2. Backend Hardening | 6/6 | Complete    | 2026-10-16 |
 | 3. Live Watchlist & Header | 5/5 | Complete    | 2026-10-16 |
-| 4. Trading & Portfolio | 0/TBD | Not started | - |
+| 4. Trading & Portfolio | 0/7 | Not started | - |
 | 5. AI Chat | 0/TBD | Not started | - |
 | 6. Ship & E2E Gate | 0/TBD | Not started | - |
