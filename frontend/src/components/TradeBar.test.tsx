@@ -23,9 +23,10 @@ type FetchMock = ReturnType<typeof vi.fn<(path: string, init?: RequestInit) => P
 function setup(fetchMock: FetchMock = vi.fn(async () => jsonResponse(FILLED))) {
   vi.stubGlobal("fetch", fetchMock);
   const onFilled = vi.fn();
+  const onUnconfirmed = vi.fn();
   const user = userEvent.setup();
-  render(<TradeBar selectedTicker={null} onFilled={onFilled} />);
-  return { fetchMock, onFilled, user };
+  render(<TradeBar selectedTicker={null} onFilled={onFilled} onUnconfirmed={onUnconfirmed} />);
+  return { fetchMock, onFilled, onUnconfirmed, user };
 }
 
 const sentBody = (fetchMock: FetchMock) => JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
@@ -160,12 +161,22 @@ describe("TradeBar outcome", () => {
     expect(await screen.findByTestId(testIds.tradeError)).toHaveTextContent("Request failed (400)");
   });
 
-  it("shows the network copy when the fetch rejects", async () => {
-    const { user } = setup(vi.fn(() => Promise.reject(new Error("down"))));
+  it("refreshes the portfolio and warns the order may have filled when the fetch rejects", async () => {
+    const { onUnconfirmed, user } = setup(vi.fn(() => Promise.reject(new Error("down"))));
     await user.type(ticker(), "MSFT");
     await user.type(quantity(), "1");
     await user.click(buy());
-    expect(await screen.findByTestId(testIds.tradeError)).toHaveTextContent("Request failed. Try again.");
+    expect(await screen.findByTestId(testIds.tradeError)).toHaveTextContent("Could not confirm the order");
+    expect(onUnconfirmed).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not refresh the portfolio when the server rejects the order", async () => {
+    const { onUnconfirmed, user } = setup(vi.fn(async () => jsonResponse({ error: "Insufficient cash" }, 400)));
+    await user.type(ticker(), "MSFT");
+    await user.type(quantity(), "1");
+    await user.click(buy());
+    await screen.findByTestId(testIds.tradeError);
+    expect(onUnconfirmed).not.toHaveBeenCalled();
   });
 
   it("renders a hostile error body as literal text", async () => {
@@ -239,8 +250,10 @@ describe("TradeBar selection prefill", () => {
   const renderWith = (fetchMock: FetchMock = vi.fn(async () => jsonResponse(FILLED))) => {
     vi.stubGlobal("fetch", fetchMock);
     const onFilled = vi.fn();
-    const view = render(<TradeBar selectedTicker={null} onFilled={onFilled} />);
-    const select = (next: string | null) => view.rerender(<TradeBar selectedTicker={next} onFilled={onFilled} />);
+    const onUnconfirmed = vi.fn();
+    const view = render(<TradeBar selectedTicker={null} onFilled={onFilled} onUnconfirmed={onUnconfirmed} />);
+    const select = (next: string | null) =>
+      view.rerender(<TradeBar selectedTicker={next} onFilled={onFilled} onUnconfirmed={onUnconfirmed} />);
     return { fetchMock, select, user: userEvent.setup() };
   };
 

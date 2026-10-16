@@ -17,7 +17,7 @@ import { Watchlist } from "./Watchlist";
 
 /** Terminal layout: header above the titled panels; owns the one shared portfolio source. */
 export function Dashboard() {
-  const { portfolio, failed, setPortfolio } = usePortfolio();
+  const { portfolio, failed, setPortfolio, refresh } = usePortfolio();
   const { history, failed: historyFailed, refresh: refreshHistory } = usePortfolioHistory();
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
   useEffect(() => connectPriceStream(), []);
@@ -41,7 +41,7 @@ export function Dashboard() {
               <MainChart selectedTicker={selectedTicker} />
             </Panel>
             <Panel title="Trade">
-              <TradeBar selectedTicker={selectedTicker} onFilled={handleFilled} />
+              <TradeBar selectedTicker={selectedTicker} onFilled={handleFilled} onUnconfirmed={refresh} />
             </Panel>
             <Panel title="Heatmap" testId={testIds.heatmap}>
               <Heatmap portfolio={portfolio} failed={failed} />

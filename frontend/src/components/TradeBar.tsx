@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { errorMessage, request } from "@/lib/api";
+import { ApiError, errorMessage, request } from "@/lib/api";
 import { formatCurrency, formatPrice, formatQuantity } from "@/lib/format";
 import type { Portfolio } from "@/lib/portfolioValue";
 import { testIds } from "@/lib/testIds";
@@ -21,6 +21,8 @@ interface TradeResponse {
   portfolio: Portfolio;
 }
 
+const UNCONFIRMED_MESSAGE = "Could not confirm the order. Portfolio refreshed; check Positions before retrying.";
+
 type Message = { kind: "filled" | "error"; text: string };
 
 const INPUT_CLASS =
@@ -28,13 +30,18 @@ const INPUT_CLASS =
 const BUTTON_CLASS =
   "h-7 flex-1 bg-submit font-semibold text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 outline-primary";
 
-/** Trade bar: ticker and quantity inputs, Buy and Sell market orders, inline result line. */
+/**
+ * Trade bar: ticker and quantity inputs, Buy and Sell market orders, inline result line.
+ * A failure that is not an ApiError means the order may have filled, so onUnconfirmed reloads the portfolio.
+ */
 export function TradeBar({
   selectedTicker,
   onFilled,
+  onUnconfirmed,
 }: {
   selectedTicker: string | null;
   onFilled: (portfolio: Portfolio) => void;
+  onUnconfirmed: () => void;
 }) {
   const [ticker, setTicker] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -73,7 +80,12 @@ export function TradeBar({
         text: `Filled ${trade.side.toUpperCase()} ${formatQuantity(trade.quantity)} ${trade.ticker} @ ${formatPrice(trade.price)}`,
       });
     } catch (err) {
-      setMessage({ kind: "error", text: errorMessage(err) });
+      if (err instanceof ApiError) {
+        setMessage({ kind: "error", text: errorMessage(err) });
+      } else {
+        onUnconfirmed();
+        setMessage({ kind: "error", text: UNCONFIRMED_MESSAGE });
+      }
     } finally {
       setInFlight(false);
       quantityRef.current?.focus();
