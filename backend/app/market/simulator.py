@@ -37,18 +37,22 @@ class GBMSimulator:
         self.rng = rng or random.Random()
         self.profiles: dict[str, TickerProfile] = {}
         self.prices: dict[str, float] = {}
+        self.last_prices: dict[str, float] = {}
 
     def add(self, ticker: str) -> float:
-        """Start simulating a ticker and return its current (seed) price."""
+        """Start simulating a ticker and return its price: the last price for a re-added ticker, else the seed."""
         if ticker not in self.prices:
             profile = KNOWN_TICKERS.get(ticker) or self._random_profile()
             self.profiles[ticker] = profile
-            self.prices[ticker] = profile.seed_price
+            self.prices[ticker] = self.last_prices.get(ticker, profile.seed_price)
         return self.prices[ticker]
 
     def remove(self, ticker: str) -> None:
+        """Stop simulating a ticker, remembering its price so a re-add resumes there."""
         self.profiles.pop(ticker, None)
-        self.prices.pop(ticker, None)
+        price = self.prices.pop(ticker, None)
+        if price is not None:
+            self.last_prices[ticker] = price
 
     def step(self) -> dict[str, float]:
         """Advance every ticker by one tick and return the new prices."""
