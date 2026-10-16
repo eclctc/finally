@@ -29,10 +29,13 @@ Windows: `scripts/start_windows.ps1` and `scripts/stop_windows.ps1`. Pass `--bui
 ```bash
 cd backend && uv run pytest                 # backend unit tests
 cd frontend && npm test                     # frontend unit tests
+cd frontend && npm run build                # static export to frontend/out/
 cd test && npm run test:docker              # Playwright E2E in Docker (LLM_MOCK=true)
 ```
 
 Run the backend locally: `cd backend && LLM_MOCK=true uv run uvicorn app.main:app --port 8000`.
+
+Then run the frontend dev server with `cd frontend && npm run dev` (serves http://localhost:3000 and proxies `/api/*` to the backend on :8000; use `npm run dev -- -p 3100` if port 3000 is busy).
 
 ## Configuration
 
