@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, errorMessage, request } from "./api";
 import { clearTicker, seedPrices, type FrameEntry } from "./priceStore";
 
-/** Owns watchlist membership: ticker names in GET /api/watchlist order (null until the first load settles), plus add and remove. */
+/**
+ * Owns watchlist membership: ticker names in GET /api/watchlist order (null until the first load settles), plus add and remove.
+ * A load applies only if no newer load started since, and `loadFailed` is true only while nothing has loaded.
+ */
 export function useWatchlist() {
   const [tickers, setTickers] = useState<string[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -12,14 +15,18 @@ export function useWatchlist() {
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
 
+  const latestLoad = useRef(0);
+
   const load = useCallback(async () => {
+    const mine = ++latestLoad.current;
     try {
       const { tickers: list } = await request<{ tickers: FrameEntry[] }>("/api/watchlist");
+      if (latestLoad.current !== mine) return;
       seedPrices(Object.fromEntries(list.map((entry) => [entry.ticker, entry])));
       setTickers(list.map((entry) => entry.ticker));
       setLoadFailed(false);
     } catch {
-      setLoadFailed(true);
+      if (latestLoad.current === mine) setLoadFailed(true);
     }
   }, []);
 
@@ -69,5 +76,5 @@ export function useWatchlist() {
 
   const clearError = useCallback(() => setError(null), []);
 
-  return { tickers, loadFailed, error, adding, removing, add, remove, clearError };
+  return { tickers, loadFailed: loadFailed && tickers === null, error, adding, removing, add, remove, clearError };
 }

@@ -322,6 +322,49 @@ describe("Watchlist add form", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Request failed. Try again.");
   });
 
+  it("keeps a loaded list when the reload after an add fails", async () => {
+    let gets = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_path: string, init?: RequestInit) => {
+        if (init?.method === "POST") return Promise.resolve(jsonResponse({ ticker: "DIS" }));
+        return ++gets === 1 ? Promise.resolve(jsonResponse({ tickers: [makeWatchlistEntry("AAPL")] })) : Promise.reject(new Error("down"));
+      }),
+    );
+    renderWatchlist();
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    await userEvent.setup().type(addInput(), "dis{Enter}");
+    await waitFor(() => expect(gets).toBe(2));
+    await waitFor(() => expect(addButton()).toBeDisabled());
+    expect(screen.getByTestId(testIds.watchlistRow("AAPL"))).toBeInTheDocument();
+    expect(screen.queryByText(LOAD_ERROR)).toBeNull();
+  });
+
+  it("ignores an older reload that resolves after a newer one", async () => {
+    let resolveStale: (response: Response) => void = () => {};
+    let gets = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_path: string, init?: RequestInit) => {
+        if (init?.method) return Promise.resolve(jsonResponse({ ticker: "x" }));
+        gets += 1;
+        if (gets === 1) return Promise.resolve(jsonResponse({ tickers: [makeWatchlistEntry("AAPL")] }));
+        if (gets === 2) return new Promise<Response>((resolve) => (resolveStale = resolve));
+        return Promise.resolve(jsonResponse({ tickers: [makeWatchlistEntry("DIS")] }));
+      }),
+    );
+    renderWatchlist();
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    const user = userEvent.setup();
+    await user.type(addInput(), "dis{Enter}");
+    await waitFor(() => expect(gets).toBe(2));
+    await user.click(screen.getByTestId(testIds.watchlistRemove("AAPL")));
+    await screen.findByTestId(testIds.watchlistRow("DIS"));
+    await act(async () => resolveStale(jsonResponse({ tickers: [makeWatchlistEntry("AAPL")] })));
+    expect(screen.getByTestId(testIds.watchlistRow("DIS"))).toBeInTheDocument();
+    expect(screen.queryByTestId(testIds.watchlistRow("AAPL"))).toBeNull();
+  });
+
   it("keeps the form visible while loading, load-failed, empty and populated", async () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
     const loading = renderWatchlist();
