@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { errorMessage, request } from "@/lib/api";
 import { formatCurrency, formatPrice, formatQuantity } from "@/lib/format";
 import type { Portfolio } from "@/lib/portfolioValue";
@@ -41,15 +41,16 @@ export function TradeBar({
   const [inFlight, setInFlight] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
   const quantityRef = useRef<HTMLInputElement>(null);
-  const hadSelection = useRef(false);
+  const [seenSelection, setSeenSelection] = useState<string | null>(null);
   const livePrice = useTickerPrice(ticker.trim());
 
-  useEffect(() => {
-    if (selectedTicker === null) return;
-    setTicker((typed) => (hadSelection.current || typed === "" ? selectedTicker : typed));
-    hadSelection.current = true;
-    setMessage(null);
-  }, [selectedTicker]);
+  if (selectedTicker !== seenSelection) {
+    setSeenSelection(selectedTicker);
+    if (selectedTicker !== null) {
+      if (seenSelection !== null || ticker === "") setTicker(selectedTicker);
+      setMessage(null);
+    }
+  }
 
   const amount = Number(quantity);
   const validQuantity = Number.isFinite(amount) && amount > 0;

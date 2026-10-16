@@ -98,7 +98,7 @@ describe("Dashboard", () => {
     );
     render(<Dashboard />);
     await waitFor(() => expect(screen.getByTestId(testIds.mainChart)).toHaveAttribute("data-ticker", "AAPL"));
-    expect(screen.getByTestId(testIds.tradeTicker)).toHaveValue("AAPL");
+    await waitFor(() => expect(screen.getByTestId(testIds.tradeTicker)).toHaveValue("AAPL"));
   });
 
   it("the heatmap shows a held position as a labeled tile", async () => {
