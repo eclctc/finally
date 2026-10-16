@@ -41,10 +41,14 @@ export function TradeBar({
   const [inFlight, setInFlight] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
   const quantityRef = useRef<HTMLInputElement>(null);
+  const hadSelection = useRef(false);
   const livePrice = useTickerPrice(ticker.trim());
 
   useEffect(() => {
-    if (selectedTicker !== null) setTicker(selectedTicker);
+    if (selectedTicker === null) return;
+    setTicker((typed) => (hadSelection.current || typed === "" ? selectedTicker : typed));
+    hadSelection.current = true;
+    setMessage(null);
   }, [selectedTicker]);
 
   const amount = Number(quantity);
