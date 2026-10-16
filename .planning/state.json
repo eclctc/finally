@@ -16,7 +16,7 @@
     {
       "number": "3",
       "name": "Live Watchlist & Header",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "4",
@@ -36,8 +36,8 @@
   ],
   "next": {
     "command": "/gsd-progress --next",
-    "label": "Advance to the next step (plan phase 3)",
-    "reason": "Phase 3 of 6 — needs a plan"
+    "label": "Advance to the next step",
+    "reason": "Phase 3 of 6 · 33% · executing"
   },
-  "updated_at": "2026-10-16T18:12:27.701Z"
+  "updated_at": "2026-10-16T20:41:25.879Z"
 }
