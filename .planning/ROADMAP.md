@@ -62,7 +62,18 @@ Plans:
   4. Removing a ticker and adding it back keeps its original session open price, so its daily change % does not reset.
   5. The backend pytest suite passes, with a new test that reproduces each fix, and the snapshot and chat history queries are backed by per-user, time-ordered indexes.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+**Wave 1**
+- [ ] 02-01-PLAN.md — LLM boundary: fixed public 502 messages, server-side logging, 30 s timeout, no 500 on missing choices or bad content (HARD-01, HARD-02, HARD-03)
+- [ ] 02-02-PLAN.md — Storage: idempotent watchlist insert under concurrent adds; per-user time-ordered indexes applied by init_db (HARD-04, HARD-08)
+- [ ] 02-03-PLAN.md — Session open survives remove and re-add; simulator resumes at the last price (HARD-07)
+- [ ] 02-04-PLAN.md — Chat turn atomicity: savepoint helper, per-action isolation with fixed failure reason, no transaction across awaits (HARD-05)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 02-05-PLAN.md — Cap of 5 trades and 5 watchlist changes per reply with skipped actions recorded; prompt states the cap; full-suite INT-04 gate (HARD-06, INT-04)
+
 **UI hint**: no
 
 Research flag: prove the transaction boundary with a failing test first. `execute_trade`'s `with conn:` commits, so nesting does not give atomicity; use per-action SAVEPOINTs opened only after the LLM returns. Enforce the action cap in the service, not the schema.
@@ -143,7 +154,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 2 has no
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 4/4 | Complete    | 2026-10-16 |
-| 2. Backend Hardening | 0/TBD | Not started | - |
+| 2. Backend Hardening | 0/5 | Not started | - |
 | 3. Live Watchlist & Header | 0/TBD | Not started | - |
 | 4. Trading & Portfolio | 0/TBD | Not started | - |
 | 5. AI Chat | 0/TBD | Not started | - |

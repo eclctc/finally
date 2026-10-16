@@ -42,15 +42,16 @@ Filled in by the planner and executor as tasks are created. Requirement-level ma
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | TBD | TBD | HARD-01 | — | Empty choices / None message / bad content give `LLMError` and route 502, never 500 | unit + route | `cd backend && uv run pytest -q tests/chat/test_llm.py tests/chat/test_router.py` | ✅ extend | ⬜ pending |
-| TBD | TBD | TBD | HARD-02 | T-02 info disclosure | 502 body is a fixed constant; upstream text only in `caplog`; missing-key message names `OPENROUTER_API_KEY` | unit + route | same as above | ✅ extend (update `upstream down` test) | ⬜ pending |
-| TBD | TBD | TBD | HARD-03 | T-02 DoS | `acompletion` receives `timeout`; `litellm.exceptions.Timeout` gives 502 | unit + route | same as above | ✅ extend | ⬜ pending |
-| TBD | TBD | TBD | HARD-04 | — | Concurrent duplicate adds: no exception, one row | service + db | `cd backend && uv run pytest -q tests/services/test_watchlist.py tests/db/test_repository.py` | ✅ extend (update duplicate-raises test) | ⬜ pending |
-| TBD | TBD | TBD | HARD-05 | — | Unexpected failure rolls back only that action; stored actions equal returned; no transaction open during LLM call | service + db | `cd backend && uv run pytest -q tests/chat/test_service.py tests/db/test_connection.py tests/services/test_portfolio.py` | ✅ extend; savepoint tests new | ⬜ pending |
-| TBD | TBD | TBD | HARD-06 | T-02 tampering | 7 + 7 actions: 5 executed each, 2 `failed` each with reason | service | `cd backend && uv run pytest -q tests/chat/test_service.py` | ✅ extend | ⬜ pending |
-| TBD | TBD | TBD | HARD-07 | — | Remove then re-add keeps `open_price`; simulator resumes at last price | unit | `cd backend && uv run pytest -q tests/market/test_cache.py tests/market/test_simulator.py` | ✅ extend (update restart-at-seed test) | ⬜ pending |
-| TBD | TBD | TBD | HARD-08 | — | Query plans use indexes, no temp b-tree; `init_db` adds them to an existing DB | db | `cd backend && uv run pytest -q tests/db/test_connection.py` | ✅ extend | ⬜ pending |
-| TBD | TBD | TBD | INT-04 | — | N/A | full | `cd backend && uv run pytest -q` | ✅ | ⬜ pending |
+| 02-01-T1 | 02-01 | 1 | HARD-02 | T-02-01, T-02-03 | 502 body is the fixed `UPSTREAM_ERROR`; upstream text only in `caplog`; missing-key message names `OPENROUTER_API_KEY` | route + unit | `cd backend && uv run pytest -q tests/chat/test_router.py tests/chat/test_llm.py` | ✅ extend (update `upstream down` test) | ⬜ pending |
+| 02-01-T2 | 02-01 | 1 | HARD-01, HARD-03 | T-02-01, T-02-02 | No choices / None message give `UPSTREAM_ERROR`; bad content gives `BAD_REPLY_ERROR`; `timeout=30`; `Timeout` gives `TIMEOUT_ERROR`; all 502 | unit + route | `cd backend && uv run pytest -q tests/chat/` | ✅ extend | ⬜ pending |
+| 02-02-T1 | 02-02 | 1 | HARD-04 | T-02-04 | Concurrent duplicate adds: no exception, one row | service + db | `cd backend && uv run pytest -q tests/services/test_watchlist.py tests/db/test_repository.py tests/routes` | ✅ extend (update duplicate-raises test) | ⬜ pending |
+| 02-02-T2 | 02-02 | 1 | HARD-08 | T-02-05 | Query plans use indexes, no temp b-tree; `init_db` adds them to an existing DB | db | `cd backend && uv run pytest -q tests/db/` | new `tests/db/test_indexes.py` | ⬜ pending |
+| 02-03-T1 | 02-03 | 1 | HARD-07 | T-02-06 | Simulator re-add keeps `open_price` and resumes at the last price | unit | `cd backend && uv run pytest -q tests/market/test_simulator.py tests/market/test_cache.py` | ✅ extend (update restart-at-seed test) | ⬜ pending |
+| 02-03-T2 | 02-03 | 1 | HARD-07 | T-02-06 | Cache keeps the open across remove/re-add; Massive re-add keeps the open | unit | `cd backend && uv run pytest -q tests/market/` | ✅ extend | ⬜ pending |
+| 02-04-T1 | 02-04 | 1 | HARD-05 | T-02-07, T-02-08 | Unexpected failure on trade 2 of 3 is `failed` with `UNEXPECTED_ERROR`; others commit; stored actions equal returned | service | `cd backend && uv run pytest -q tests/chat/test_service.py tests/services tests/routes tests/db` | ✅ extend | ⬜ pending |
+| 02-04-T2 | 02-04 | 1 | HARD-05 | T-02-09 | No transaction across awaits or the LLM call; savepoint commit / nested rollback / re-raise; trade + snapshot one unit | service + db | `cd backend && uv run pytest -q tests/chat/test_service.py tests/db/test_connection.py tests/services/test_portfolio.py tests/services/test_watchlist.py tests/routes` | ✅ extend; savepoint tests new | ⬜ pending |
+| 02-05-T1 | 02-05 | 2 | HARD-06 | T-02-10, T-02-11 | 7 + 7 actions: 5 executed each, 2 `failed` each with the skip reason; boundary 5/6; per-kind cap | service | `cd backend && uv run pytest -q tests/chat/` | ✅ extend | ⬜ pending |
+| 02-05-T2 | 02-05 | 2 | HARD-06, INT-04 | — | Prompt states the cap; every Phase 2 test file passes alone and in the full suite | full | `cd backend && uv run pytest -q` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
