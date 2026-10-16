@@ -1,8 +1,9 @@
 /**
  * Figures are bare en-US numbers the E2E `parseNumber` rule reads back exactly.
  * Never add labels, units or abbreviations. A fixed locale avoids prerender hydration mismatches.
+ * Intl does the only rounding; the guard below just keeps a tiny negative from showing as "-0.00".
  */
-const cents = (n: number) => Math.round(n * 100) / 100 + 0; // "+ 0" turns -0 into 0
+const noNegativeZero = (n: number) => (Math.abs(n) < 0.005 ? 0 : n);
 
 const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const decimal2 = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -14,8 +15,8 @@ const percent = new Intl.NumberFormat("en-US", {
   signDisplay: "exceptZero",
 });
 
-export const formatCurrency = (n: number) => currency.format(cents(n));
-export const formatPrice = (n: number) => decimal2.format(cents(n));
+export const formatCurrency = (n: number) => currency.format(noNegativeZero(n));
+export const formatPrice = (n: number) => decimal2.format(noNegativeZero(n));
 export const formatQuantity = (n: number) => quantity.format(n);
 /** Input is a fraction: 0.0123 means 1.23%. */
 export const formatPercent = (fraction: number) => percent.format(fraction);
