@@ -6,6 +6,7 @@ import { connectPriceStream } from "@/lib/priceStream";
 import { testIds } from "@/lib/testIds";
 import { usePortfolio } from "@/lib/usePortfolio";
 import { Header } from "./Header";
+import { Heatmap } from "./Heatmap";
 import { MainChart } from "./MainChart";
 import { Panel } from "./Panel";
 import { TradeBar } from "./TradeBar";
@@ -32,7 +33,9 @@ export function Dashboard() {
             <Panel title="Trade">
               <TradeBar selectedTicker={selectedTicker} onFilled={handleFilled} />
             </Panel>
-            <Panel title="Heatmap" testId={testIds.heatmap} />
+            <Panel title="Heatmap" testId={testIds.heatmap}>
+              <Heatmap portfolio={portfolio} failed={failed} />
+            </Panel>
             <Panel title="P&L" testId={testIds.pnlChart} className="col-span-2" />
             <Panel title="Positions" testId={testIds.positionsTable} className="col-span-3" />
           </div>

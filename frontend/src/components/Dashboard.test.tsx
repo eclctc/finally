@@ -101,6 +101,20 @@ describe("Dashboard", () => {
     expect(screen.getByTestId(testIds.tradeTicker)).toHaveValue("AAPL");
   });
 
+  it("the heatmap shows a held position as a labeled tile", async () => {
+    vi.stubGlobal(
+      "fetch",
+      routeFetch({
+        "GET /api/portfolio": () => jsonResponse(makePortfolio(7900, [makePosition("JPM", 10, 200, 210)])),
+      }),
+    );
+    render(<Dashboard />);
+    const heatmap = screen.getByTestId(testIds.heatmap);
+    expect(await within(heatmap).findByText("JPM")).toBeInTheDocument();
+    const firstRect = heatmap.querySelector("svg rect");
+    expect(Number(firstRect?.getAttribute("width"))).toBeGreaterThan(0);
+  });
+
   it("still renders the header figures", () => {
     render(<Dashboard />);
     expect(screen.getByTestId(testIds.cashBalance)).toBeInTheDocument();
