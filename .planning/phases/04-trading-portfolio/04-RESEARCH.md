@@ -478,19 +478,22 @@ Recharts passes `payload[0].payload` as the data row (`{t, price}` or `{t, value
 | A5 | The history payload for a full week is about 1.5 MB (75 bytes x 20,160 rows) | Pattern 8 | Slower 30 s poll on a long-running DB; DATA-V2-01 is the planned fix |
 | A6 | Playwright can drive the container exactly as in Phase 3 (`finally-phase3` image, `127.0.0.1:8010`, tmpfs DB, `LLM_MOCK=true`) | Validation Architecture | The E2E gate command needs adjusting |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Re-clicking the already-selected row after typing another ticker**
    - What we know: the UI-SPEC fills the field when the selection "changes"; clicking the same row changes nothing.
    - What's unclear: whether the user expects a refill.
    - Recommendation: accept for Phase 4; if wanted, bump a `selectionNonce` in `Dashboard` on every click and key the fill effect on it (Pitfall 2 rule stays).
+   - **RESOLVED:** accepted for Phase 4. Re-clicking the selected row does not refill the field (04-02-PLAN Task 2 and Flagged Assumptions); a `selectionNonce` can be added later if wanted.
 
 2. **WR-03 (`clearTicker` on removing a held ticker)**
    - What we know: the stream keeps sending a held ticker after it leaves the watchlist (backend tracks watchlist plus positions); the store entry returns on the next frame, so the cost is a sub-second fallback to `current_price` and a restarted main-chart series. UI-SPEC marks the fix "recommended, not blocking".
    - Recommendation: defer, or do it cheaply by passing a `heldTickers` set into `useWatchlist` only if a plan has spare capacity. Do not let it block.
+   - **RESOLVED:** deferred. Positions and heatmap fall back to the API `current_price` until the next frame restores the entry (about 500 ms), so nothing shows `--` (04-02-PLAN Flagged Assumptions; 04-04 and 04-05 `livePosition` fallback). Stays open as WR-03 in 03-REVIEW-DISPOSITION.md.
 
 3. **Heatmap data when a position has no live price**
    - `livePosition` falls back to `current_price`, so every tile always has a positive value. No open issue; listed for the planner's completeness.
+   - **RESOLVED:** no action needed; `livePosition` falls back to `current_price` (04-04-PLAN must_haves).
 
 ## Environment Availability
 
