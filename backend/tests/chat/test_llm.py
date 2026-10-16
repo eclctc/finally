@@ -87,15 +87,17 @@ async def test_request_reply_parses_model_output(monkeypatch):
     assert captured["extra_body"] == llm.EXTRA_BODY
 
 
-async def test_request_failure_raises_llm_error(monkeypatch):
+@pytest.mark.parametrize("upstream_text", ["upstream down", ""])
+async def test_request_failure_raises_llm_error(monkeypatch, upstream_text):
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
 
     async def failing_completion(**kwargs):
-        raise RuntimeError("upstream down")
+        raise RuntimeError(upstream_text)
 
     monkeypatch.setattr(llm, "acompletion", failing_completion)
-    with pytest.raises(LLMError, match="upstream down"):
+    with pytest.raises(LLMError) as excinfo:
         await llm.request_reply([])
+    assert str(excinfo.value) == llm.UPSTREAM_ERROR
 
 
 async def test_missing_api_key_raises(monkeypatch):
