@@ -1,5 +1,6 @@
 """LLM call via LiteLLM -> OpenRouter with Cerebras as the inference provider."""
 
+import logging
 import os
 
 from litellm import acompletion
@@ -8,9 +9,12 @@ from pydantic import ValidationError
 from .mock import mock_reply
 from .schemas import ChatReply
 
+logger = logging.getLogger(__name__)
+
 MODEL = "openrouter/openai/gpt-oss-120b"
 EXTRA_BODY = {"provider": {"order": ["cerebras"], "allow_fallbacks": False}}
 MAX_TOKENS = 4096  # an uncapped request reserves 40k tokens of credit, which can make OpenRouter skip Cerebras
+UPSTREAM_ERROR = "The AI assistant is unavailable, please try again"
 
 
 class LLMError(Exception):
@@ -35,7 +39,8 @@ async def request_reply(messages: list[dict]) -> ChatReply:
             extra_body=EXTRA_BODY,
         )
     except Exception as exc:
-        raise LLMError(f"LLM request failed: {exc}") from exc
+        logger.exception("LLM request failed")
+        raise LLMError(UPSTREAM_ERROR) from exc
     return parse_reply(response.choices[0].message.content)
 
 
