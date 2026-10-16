@@ -1,13 +1,29 @@
 "use client";
 
+import { testIds } from "@/lib/testIds";
 import { Header } from "./Header";
+import { Panel } from "./Panel";
 
 /** Terminal layout: header above the titled panels. */
 export function Dashboard() {
   return (
     <div className="flex h-screen min-w-[1024px] flex-col bg-surface text-text">
       <Header />
-      <div className="min-h-0 flex-1" />
+      <div className="flex min-h-0 flex-1 gap-px bg-line">
+        <main className="grid min-h-0 flex-1 grid-cols-[minmax(300px,340px)_1fr] gap-px">
+          <Panel title="Watchlist" testId={testIds.watchlist} />
+          <div className="grid min-h-0 grid-cols-[1fr_1fr_260px] grid-rows-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-px">
+            <Panel title="Chart" className="col-span-2" />
+            <Panel title="Trade" />
+            <Panel title="Heatmap" testId={testIds.heatmap} />
+            <Panel title="P&L" testId={testIds.pnlChart} className="col-span-2" />
+            <Panel title="Positions" testId={testIds.positionsTable} className="col-span-3" />
+          </div>
+        </main>
+        <aside className="w-[360px] shrink-0">
+          <Panel title="AI Chat" testId={testIds.chatPanel} className="h-full" />
+        </aside>
+      </div>
     </div>
   );
 }
