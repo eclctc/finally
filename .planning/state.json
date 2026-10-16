@@ -1,0 +1,43 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": null,
+  "phases": [
+    {
+      "number": "1",
+      "name": "Walking Skeleton",
+      "status": "complete"
+    },
+    {
+      "number": "2",
+      "name": "Backend Hardening",
+      "status": "pending"
+    },
+    {
+      "number": "3",
+      "name": "Live Watchlist & Header",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "Trading & Portfolio",
+      "status": "pending"
+    },
+    {
+      "number": "5",
+      "name": "AI Chat",
+      "status": "pending"
+    },
+    {
+      "number": "6",
+      "name": "Ship & E2E Gate",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd-progress --next",
+    "label": "Advance to the next step (plan phase 2)",
+    "reason": "Phase 2 of 6 — needs a plan"
+  },
+  "updated_at": "2026-10-16T15:33:42.550Z"
+}
