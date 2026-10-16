@@ -2,8 +2,14 @@ import { act, render, screen } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { makeFrame, makeFrameEntry } from "@/test/fixtures";
-import { EMPTY_HISTORY, mergeFrame, setStatus } from "./priceStore";
-import { useConnectionStatus, usePriceVersion, useTickerHistory, useTickerPrice } from "./usePrice";
+import { EMPTY_SERIES, mergeFrame, setStatus } from "./priceStore";
+import {
+  useConnectionStatus,
+  usePriceVersion,
+  useTickerHistory,
+  useTickerPrice,
+  useTickerSeries,
+} from "./usePrice";
 
 const renders: Record<string, number> = {};
 
@@ -14,8 +20,10 @@ function PriceProbe({ ticker }: { ticker: string }) {
 }
 
 function HistoryProbe({ ticker }: { ticker: string }) {
+  const series = useTickerSeries(ticker);
   const history = useTickerHistory(ticker);
-  return <p data-testid={`history-${ticker}`}>{history === EMPTY_HISTORY ? "empty" : history.length}</p>;
+  const label = series === EMPTY_SERIES ? "empty" : series.length;
+  return <p data-testid={`history-${ticker}`}>{`${label}/${history.length}`}</p>;
 }
 
 function StatusProbe() {
@@ -44,12 +52,12 @@ describe("price hooks", () => {
     expect(renders.MSFT).toBe(msftBefore);
   });
 
-  it("returns the shared empty history for an unknown ticker and grows after merges", () => {
+  it("returns the shared empty series for an unknown ticker and grows after merges", () => {
     render(<HistoryProbe ticker="AAPL" />);
-    expect(screen.getByTestId("history-AAPL")).toHaveTextContent("empty");
+    expect(screen.getByTestId("history-AAPL")).toHaveTextContent("empty/0");
     act(() => mergeFrame(makeFrame(makeFrameEntry("AAPL", 100, 1))));
     act(() => mergeFrame(makeFrame(makeFrameEntry("AAPL", 101, 2))));
-    expect(screen.getByTestId("history-AAPL")).toHaveTextContent("2");
+    expect(screen.getByTestId("history-AAPL")).toHaveTextContent("2/2");
   });
 
   it("follows the connection status", () => {

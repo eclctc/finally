@@ -40,6 +40,19 @@ describe("Sparkline", () => {
     expect(lineOf(container)).toHaveAttribute("stroke", "var(--color-muted)");
   });
 
+  it("colors by the last 300 points of a 400-point history, not the first 100", () => {
+    const history = [...Array(100).fill(500), ...Array.from({ length: 300 }, (_, i) => 100 + i / 299)];
+    const { container } = render(<Sparkline history={history} />);
+    expect(container.querySelectorAll("path.recharts-line-curve")).toHaveLength(1);
+    expect(lineOf(container)).toHaveAttribute("stroke", "var(--color-up)");
+  });
+
+  it("uses the muted color when the last 300 points are flat after a high start", () => {
+    const history = [...Array(100).fill(500), ...Array(300).fill(100)];
+    const { container } = render(<Sparkline history={history} />);
+    expect(lineOf(container)).toHaveAttribute("stroke", "var(--color-muted)");
+  });
+
   it("adds no keyboard focus stop", () => {
     const { container } = render(<Sparkline history={[1, 2, 3]} />);
     expect(container.querySelector('[tabindex]:not([tabindex="-1"])')).toBeNull();

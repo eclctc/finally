@@ -1,8 +1,8 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import {
-  EMPTY_HISTORY,
+  EMPTY_SERIES,
   getEntry,
-  getHistory,
+  getSeries,
   getStatus,
   getVersion,
   subscribeStatus,
@@ -10,6 +10,7 @@ import {
   subscribeVersion,
   type ConnectionStatus,
   type PriceEntry,
+  type PricePoint,
 } from "./priceStore";
 
 /** Latest entry for one ticker; re-renders only when that ticker changes. */
@@ -18,10 +19,16 @@ export function useTickerPrice(ticker: string): PriceEntry | undefined {
   return useSyncExternalStore(subscribe, () => getEntry(ticker), () => undefined);
 }
 
+/** Timestamped price series for one ticker, oldest first. */
+export function useTickerSeries(ticker: string): readonly PricePoint[] {
+  const subscribe = useCallback((listener: () => void) => subscribeTicker(ticker, listener), [ticker]);
+  return useSyncExternalStore(subscribe, () => getSeries(ticker), () => EMPTY_SERIES);
+}
+
 /** Price history for one ticker, oldest first. */
 export function useTickerHistory(ticker: string): readonly number[] {
-  const subscribe = useCallback((listener: () => void) => subscribeTicker(ticker, listener), [ticker]);
-  return useSyncExternalStore(subscribe, () => getHistory(ticker), () => EMPTY_HISTORY);
+  const series = useTickerSeries(ticker);
+  return useMemo(() => series.map((point) => point.price), [series]);
 }
 
 /** Current stream connection status. */

@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { makeFrame, makeFrameEntry } from "@/test/fixtures";
 import {
-  EMPTY_HISTORY,
+  EMPTY_SERIES,
   HISTORY_LIMIT,
   clearTicker,
   getEntry,
-  getHistory,
+  getSeries,
   getStatus,
   getVersion,
   mergeFrame,
@@ -19,6 +19,8 @@ import {
 
 const aapl = (price: number, timestamp: number, openPrice?: number) =>
   makeFrame(makeFrameEntry("AAPL", price, timestamp, openPrice));
+
+const prices = (ticker: string) => getSeries(ticker).map((point) => point.price);
 
 describe("mergeFrame", () => {
   it("stores price, open price and timestamp with no flash on the first tick", () => {
@@ -34,7 +36,7 @@ describe("mergeFrame", () => {
     expect(getEntry("AAPL")?.flash).toBe("down");
     mergeFrame(aapl(99, 4));
     expect(getEntry("AAPL")?.flash).toBeNull();
-    expect(getHistory("AAPL")).toEqual([100, 101, 99, 99]);
+    expect(prices("AAPL")).toEqual([100, 101, 99, 99]);
   });
 
   it("ignores a repeated timestamp: same entry object, no listener call, no history point, same version", () => {
@@ -46,7 +48,7 @@ describe("mergeFrame", () => {
     mergeFrame(aapl(105, 1));
     expect(getEntry("AAPL")).toBe(stored);
     expect(listener).not.toHaveBeenCalled();
-    expect(getHistory("AAPL")).toHaveLength(1);
+    expect(getSeries("AAPL")).toHaveLength(1);
     expect(getVersion()).toBe(version);
   });
 
@@ -54,11 +56,11 @@ describe("mergeFrame", () => {
     const frame = aapl(100, 1);
     mergeFrame(frame);
     const stored = getEntry("AAPL");
-    const history = getHistory("AAPL");
+    const history = getSeries("AAPL");
     const version = getVersion();
     mergeFrame(frame);
     expect(getEntry("AAPL")).toBe(stored);
-    expect(getHistory("AAPL")).toBe(history);
+    expect(getSeries("AAPL")).toBe(history);
     expect(getVersion()).toBe(version);
   });
 
@@ -118,32 +120,37 @@ describe("history", () => {
   const tick = (index: number) => mergeFrame(aapl(100 + index, index + 1));
 
   it.each([
-    [299, 299],
-    [300, 300],
-    [301, 300],
+    [1199, 1199],
+    [1200, 1200],
+    [1201, 1200],
   ])("holds %i distinct ticks as %i points", (ticks, expected) => {
     for (let i = 0; i < ticks; i++) tick(i);
-    expect(getHistory("AAPL")).toHaveLength(expected);
-    expect(HISTORY_LIMIT).toBe(300);
+    expect(getSeries("AAPL")).toHaveLength(expected);
+    expect(HISTORY_LIMIT).toBe(1200);
   });
 
   it("drops the oldest point past the limit", () => {
-    for (let i = 0; i < 301; i++) tick(i);
-    expect(getHistory("AAPL")[0]).toBe(101);
-    expect(getHistory("AAPL").at(-1)).toBe(400);
+    for (let i = 0; i < 1201; i++) tick(i);
+    expect(getSeries("AAPL")[0].price).toBe(101);
+    expect(getSeries("AAPL").at(-1)?.price).toBe(1300);
+  });
+
+  it("stores t as exactly the frame timestamp times 1000 with the raw price", () => {
+    mergeFrame(aapl(190.123456, 1792174878.5));
+    expect(getSeries("AAPL")).toEqual([{ t: 1792174878.5 * 1000, price: 190.123456 }]);
   });
 
   it("returns a new array after an append and the same reference otherwise", () => {
     tick(0);
-    const before = getHistory("AAPL");
-    expect(getHistory("AAPL")).toBe(before);
+    const before = getSeries("AAPL");
+    expect(getSeries("AAPL")).toBe(before);
     tick(1);
-    expect(getHistory("AAPL")).not.toBe(before);
+    expect(getSeries("AAPL")).not.toBe(before);
   });
 
   it("returns the shared empty history for an unknown ticker", () => {
-    expect(getHistory("ZZZ")).toBe(EMPTY_HISTORY);
-    expect(getHistory("ZZZ")).toBe(getHistory("YYY"));
+    expect(getSeries("ZZZ")).toBe(EMPTY_SERIES);
+    expect(getSeries("ZZZ")).toBe(getSeries("YYY"));
   });
 });
 
@@ -151,7 +158,12 @@ describe("seedPrices", () => {
   it("fills an absent ticker with flash null", () => {
     seedPrices(aapl(190, 1));
     expect(getEntry("AAPL")).toEqual({ price: 190, openPrice: 190, timestamp: 1, flash: null });
-    expect(getHistory("AAPL")).toEqual([190]);
+    expect(prices("AAPL")).toEqual([190]);
+  });
+
+  it("adds one point carrying the REST timestamp", () => {
+    seedPrices(aapl(190, 42));
+    expect(getSeries("AAPL")).toEqual([{ t: 42000, price: 190 }]);
   });
 
   it("never overwrites a streamed entry", () => {
@@ -173,7 +185,7 @@ describe("clearTicker", () => {
     subscribeTicker("AAPL", listener);
     clearTicker("AAPL");
     expect(getEntry("AAPL")).toBeUndefined();
-    expect(getHistory("AAPL")).toBe(EMPTY_HISTORY);
+    expect(getSeries("AAPL")).toBe(EMPTY_SERIES);
     expect(listener).toHaveBeenCalledTimes(1);
     mergeFrame(aapl(110, 2));
     expect(getEntry("AAPL")?.flash).toBeNull();
@@ -213,7 +225,7 @@ describe("resetPriceStore", () => {
     listener.mockClear();
     resetPriceStore();
     expect(getEntry("AAPL")).toBeUndefined();
-    expect(getHistory("AAPL")).toBe(EMPTY_HISTORY);
+    expect(getSeries("AAPL")).toBe(EMPTY_SERIES);
     expect(getStatus()).toBe("reconnecting");
     expect(getVersion()).toBe(0);
     mergeFrame(aapl(100, 1));
