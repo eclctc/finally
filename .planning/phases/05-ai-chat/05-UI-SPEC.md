@@ -1,7 +1,8 @@
 ---
 phase: "5"
 slug: ai-chat
-status: draft
+status: approved
+reviewed_at: "2026-10-16"
 shadcn_initialized: false
 preset: none
 created: "2026-10-16"
@@ -15,7 +16,7 @@ created: "2026-10-16"
 >
 > No CONTEXT.md exists for this phase and no interactive channel was available, so every open question was decided here with a recommended default and a recorded rationale. The decisions most worth the user's attention are marked CONFIRM in the "Decision Log".
 >
-> Parallel-work note: Phase 4 (`04-UI-SPEC.md`) was being written at the same time and did not exist when this spec was finished (the `04-trading-portfolio/` directory was empty). Every place where chat touches a Phase 4 surface states the visual contract and the dependency, and does not fix Phase 4 component internals. Re-align the highlight color and timing with 04-UI-SPEC.md if it defines a conflicting post-trade highlight (see "AI-change highlight").
+> Parallel-work note: Phase 4 (`04-UI-SPEC.md`) was written in parallel. Reconciled after both were drafted: Phase 4 defines no row highlight of its own (manual trades do not highlight rows), so this spec's blue highlight is the only row highlight; Phase 4 keeps `Panel` unchanged and this phase adds the `actions` prop; Phase 4 exposes `refresh()` and `refreshHistory()` from the shared portfolio source in `Dashboard`.
 
 ---
 
@@ -222,7 +223,9 @@ Open (320px)                                     Collapsed (40px)
 2. Transcript: `role="log"`, `aria-label="Conversation"`, `min-h-0 flex-1 overflow-y-auto bg-surface p-2`, content is a column with `gap-2`. A zero-height sentinel is the last child and is the `scrollIntoView` target.
 3. Composer: `form`, `flex shrink-0 gap-2 border-t border-line bg-panel p-2`. Textarea (left, `min-w-0 flex-1`) and Send (right, `self-end`).
 
-The shared `Panel` has no slot for a title-strip control. Add one optional prop, `actions?: React.ReactNode`, rendered inside the title `header` after the `h2` with `ml-auto`. Existing callers pass nothing and are unaffected. (This touches `Panel.tsx`, which Phase 4 may also edit; the change is additive.)
+Focal point: the transcript is the primary visual anchor (the largest region and where replies and action chips land); Send, the only purple control in the panel, is the secondary anchor.
+
+The shared `Panel` has no slot for a title-strip control. Add one optional prop, `actions?: React.ReactNode`, rendered inside the title `header` after the `h2` with `ml-auto`. Existing callers pass nothing and are unaffected. (Phase 4 makes no `Panel` change; this phase owns the additive `actions` prop.)
 
 ### Collapsed rail
 
@@ -342,10 +345,10 @@ Not highlighted: heatmap tiles, the P&L chart, the header figures (`total-value`
 
 ### Dependency on Phase 4 (state, do not fix internals)
 
-- `position-row-{T}` and the Phase 4 refresh path (`usePortfolio` lifted or shared so that the header, positions table, heatmap and P&L chart all refresh from one call) do not exist yet. Phase 5 requires Phase 4 to expose: a way to refresh portfolio plus history on demand (the same call a manual trade uses, TRADE-05), and a way for a positions row to read "AI-changed" (a module store like the price store, or a prop). Phase 5 defines the visual and the attribute; Phase 4 owns the table markup.
+- `position-row-{T}` and the Phase 4 refresh path (`usePortfolio` lifted or shared so that the header, positions table, heatmap and P&L chart all refresh from one call) do not exist yet. Phase 5 requires Phase 4 to expose a way to refresh portfolio plus history on demand (the same call a manual trade uses, TRADE-05; `refresh()` / `refreshHistory()` per 04-UI-SPEC). Phase 5 itself adds the "AI-changed" read path (a small module store like the price store) and the `data-ai-changed` attribute to the Phase 4 positions row and the Phase 3 watchlist row; Phase 4 owns the rest of the table markup.
 - `chat.spec.ts` requires `position-row-AAPL` to be visible right after a mocked buy, so the positions table must refresh from the shared path with no reload.
 - If the AI removes the currently selected watchlist ticker, the behavior is whatever Phase 4 defines for a manual removal of the selected ticker; chat adds no extra rule.
-- If `04-UI-SPEC.md` defines its own post-trade highlight for manual trades, prefer reusing its mechanism and keep this spec's color and timing for AI changes only.
+- 04-UI-SPEC.md defines no post-trade highlight for manual trades; only AI changes highlight rows.
 
 ---
 
@@ -411,9 +414,9 @@ No CONTEXT.md existed and no interactive channel was available. Each decision be
 
 | ID | Decision | Rationale | Alternative |
 |----|----------|-----------|-------------|
-| D-01 CONFIRM | A quick-prompt chip click sends immediately (sets the composer text, then sends) | One click answers the question; the demo feels fluid. Failure keeps the text in the composer so the P1 follow-up copy stays true. | Chip only fills the composer and waits for Send (two clicks, lets the user edit) |
-| D-02 CONFIRM | The composer is cleared only when the reply succeeds; a failed send keeps the text and shows the user's bubble plus the error in a non-committed "attempt slot" that a resend replaces | Satisfies CHAT-04 ("input is not lost") and the backend fact that a 502 stores nothing, with no duplicate bubbles on retry | Clear the composer on send and restore it on error (text vanishes then reappears); or keep a failed bubble in the transcript and allow duplicates |
-| D-03 CONFIRM | AI-change highlight is a whole-row `bg-primary/20` fill, 1500ms hold plus 1000ms fade, applied to the watchlist row of an added ticker and the position row of a traded ticker, and starts after the refresh settles | Distinct from the green/red price flash that can run on the same row, no new token, long enough to notice after reading the reply | Reuse green/red 25% (collides with price meaning); also highlight heatmap tiles and the P&L chart (more Phase 4 coupling) |
+| D-01 (confirmed by user) | A quick-prompt chip click sends immediately (sets the composer text, then sends) | One click answers the question; the demo feels fluid. Failure keeps the text in the composer so the P1 follow-up copy stays true. | Chip only fills the composer and waits for Send (two clicks, lets the user edit) |
+| D-02 | The composer is cleared only when the reply succeeds; a failed send keeps the text and shows the user's bubble plus the error in a non-committed "attempt slot" that a resend replaces | Satisfies CHAT-04 ("input is not lost") and the backend fact that a 502 stores nothing, with no duplicate bubbles on retry | Clear the composer on send and restore it on error (text vanishes then reappears); or keep a failed bubble in the transcript and allow duplicates |
+| D-03 (confirmed by user) | AI-change highlight is a whole-row `bg-primary/20` fill, 1500ms hold plus 1000ms fade, applied to the watchlist row of an added ticker and the position row of a traded ticker, and starts after the refresh settles | Distinct from the green/red price flash that can run on the same row, no new token, long enough to notice after reading the reply | Reuse green/red 25% (collides with price meaning); also highlight heatmap tiles and the P&L chart (more Phase 4 coupling) |
 | D-04 | Executed action chips are neutral, only failures are red | Green means price direction or P&L in this product; a fill is not a gain | Green chips for success (reads as profit) |
 | D-05 | Quick-prompt chips show only in the empty state | They are "starter" prompts; the ROADMAP says starter questions; keeps the transcript dense once a conversation exists | Keep a chip row above the composer permanently (costs about 36px of transcript height) |
 | D-06 | No unread indicator on the collapsed rail | Refresh and highlight still show the effect of AI actions; one fewer state in a v1 panel | A `bg-primary` 8px dot on the rail when a reply arrives while collapsed |
@@ -426,12 +429,12 @@ No CONTEXT.md existed and no interactive channel was available. Each decision be
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
-- [ ] Dimension 7 Inventory Provenance: PASS
+- [x] Dimension 1 Copywriting: FLAG (bare verb `Send` kept as a Phase 1 reserved string, same precedent as `Add`)
+- [x] Dimension 2 Visuals: FLAG resolved (focal point declared under Panel structure)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
+- [x] Dimension 7 Inventory Provenance: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-10-16
