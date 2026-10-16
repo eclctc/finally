@@ -1,7 +1,8 @@
 ---
 phase: "3"
 slug: live-watchlist-header
-status: draft
+status: approved
+reviewed_at: "2026-10-16"
 shadcn_initialized: false
 preset: none
 created: "2026-10-16"
@@ -75,7 +76,7 @@ Fixed component dimensions for this phase (all multiples of 4):
 
 Row width budget (panel inner width 318px = 320 minus two 1px borders): 16 padding + 56 ticker + 72 price + 64 change + 64 sparkline + 24 remove + 16 gaps (4 x 4) = 312px, leaving 6px that the flexible ticker cell absorbs.
 
-Exceptions: unchanged from Phase 1 (1px hairlines, 10px dot, 2px focus outline, 28px controls below the 44px touch guideline). Phase 3 adds no new exception. `px-1` (4px) and the 1.5px sparkline stroke are on-scale (4px) and a stroke width respectively.
+Exceptions: unchanged from Phase 1 (1px hairlines, 10px dot, 2px focus outline, 28px controls below the 44px touch guideline). Phase 3 adds one exception: the 1.5px sparkline stroke (a stroke width, not spacing). `px-1` (4px) is on-scale.
 
 ---
 
@@ -148,7 +149,7 @@ The three numeric testid elements (`cash-balance`, `total-value`, `watchlist-pri
 
 ## UI Considerations
 
-Applicable state considerations resolved: 14 covered, 0 backstop, 0 unresolved (elements introduced or changed in Phase 3). The interactive element-kind confirmation step of the probe could not run (no interactive channel), so the kinds below are the researcher's classification: watchlist list = `list-collection`, add form = `form`, remove button = `interactive-control`, header figures = `static-content`, dot = `static-content`. Dismissed: dot overflow and long-text (fixed 10px glyph; its text is visually hidden and one of three fixed words).
+Applicable state considerations resolved: 14 explicit (table below) plus the remaining probe-engine checks as backstop (list after the table), 0 unresolved. The probe engine (run by the orchestrator after checker approval) raised 34 checks over 7 elements; the user confirmed keeping the 14 explicit rows and backstopping the rest. Researcher classification: watchlist list = `list-collection`, add form = `form`, remove button = `interactive-control`, header figures = `static-content`, dot = `static-content`. Dismissed: dot overflow and long-text (fixed 10px glyph; its text is visually hidden and one of three fixed words).
 
 | Category | Element(s) | Status | Resolution / Reason |
 |----------|------------|--------|---------------------|
@@ -166,6 +167,14 @@ Applicable state considerations resolved: 14 covered, 0 backstop, 0 unresolved (
 | error | add form | ✅ covered | Input keeps its text, border becomes `border-down`, `aria-invalid="true"`, `aria-describedby` points at the error line; the error clears on the next keystroke or submit |
 | empty | add form | ✅ covered | The Add button is disabled while the trimmed input is empty; Enter on an empty input does nothing |
 | loading / error | remove button | ✅ covered | The row's `×` is disabled while its DELETE is in flight; a non-404 failure shows the backend text in the add-error slot; a 404 converges silently via refetch |
+
+Backstop considerations (user-confirmed; verified visually at UAT, not by a dedicated automated test):
+
+- { statement: "Watchlist row and remove button show no state beyond the row-level rows above (empty/loading/error/populated/zero-one-many for a single row or button reduce to the list and remove-button rows)", verification: backstop }
+- { statement: "Long ticker text in a row truncates in the ticker cell (min-w-0 truncate) and never pushes the price, change, sparkline or remove cells out of the 318px row", verification: backstop }
+- { statement: "Header cash and total figures never wrap or overflow the 56px header at the 1280px minimum width, including seven-digit values", verification: backstop }
+- { statement: "Connection dot is a fixed 10px glyph; its status text is visually hidden and one of three fixed words, so it has no overflow or long-text state", verification: backstop }
+- { statement: "Sparkline (probe: unclassified) has two states only: an empty 64x20 box with fewer than 2 points, and a 64x20 line otherwise; it never changes row height", verification: backstop }
 
 <!-- Rows are replaced, not appended, if the ui-phase probe re-runs. -->
 
@@ -391,27 +400,27 @@ No CONTEXT.md existed and no interactive channel was available. These were decid
 
 | ID | Decision | Rationale | Alternative |
 |----|----------|-----------|-------------|
-| D-01 CONFIRM | Raise the minimum width to 1280px, watchlist fixed 320, chat 320, trade 224 | Smallest change that gives every panel cell at least 206px and keeps the 312px watchlist row; keeps the 3-column center grid so Phase 4 and 5 layouts need no rework | Keep 1024px and collapse chat to a 40px rail below 1280 (chat is "open on load" in CHAT-01, so rejected) |
+| D-01 (confirmed by user) | Raise the minimum width to 1280px, watchlist fixed 320, chat 320, trade 224 | Smallest change that gives every panel cell at least 206px and keeps the 312px watchlist row; keeps the 3-column center grid so Phase 4 and 5 layouts need no rework | Keep 1024px and collapse chat to a 40px rail below 1280 (chat is "open on load" in CHAT-01, so rejected) |
 | D-02 | Failed watchlist load: `Watchlist unavailable. Reload the page to try again.` in `text-down`, `role="alert"`, no retry button | Mirrors the approved header failure pattern | Add a Retry button (extra state, not needed for a local app) |
 | D-03 | Dot starts `reconnecting` (yellow); `role="status"` with hidden state text; stays red until a recreated stream opens | True browser state; no red flash on load; no flicker while retrying | Start `disconnected` (red flash on each load) |
 | D-04 | Wordmark is the page `h1` | Fixes the missing page heading with no visual change | Add a visually hidden `h1` |
 | D-05 | `color-scheme: dark` on `html` | Fixes light scrollbars and input chrome | none |
 | D-06 | No column-head row in the watchlist | Saves 28px; `%` suffix plus `title` tooltips disambiguate the cells | Add a `Ticker / Price / Chg` head row |
-| D-07 CONFIRM | Sparkline stroke is `muted` when the net change is exactly zero (`up` above, `down` below) | Consistent with the zero-is-`muted` rule; avoids a green line on flat data | Treat zero as `up` (simpler, one fewer branch) |
+| D-07 (confirmed by user) | Sparkline stroke is `muted` when the net change is exactly zero (`up` above, `down` below) | Consistent with the zero-is-`muted` rule; avoids a green line on flat data | Treat zero as `up` (simpler, one fewer branch) |
 | D-08 | Add button disabled while the input is empty; focus returns to the add input after a successful remove; added row scrolled into view | Small usability fixes with one line each; no new state machine | Omit any of the three |
 | D-09 | Header total never flashes or announces | The focal figure stays calm; avoids a 2 Hz live region | Flash the total (competes with row flashes) |
-| D-10 | Reduced motion drops the flash entirely (Deviation #5) | Imperceptible otherwise | Persistent last-direction text color |
+| D-10 (confirmed by user) | Reduced motion drops the flash entirely (Deviation #5) | Imperceptible otherwise | Persistent last-direction text color |
 
 ---
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
-- [ ] Dimension 7 Inventory Provenance: PASS
+- [x] Dimension 1 Copywriting: FLAG (bare `Add` CTA kept under the Phase 1 rationale)
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: FLAG (1.5px stroke; now listed as an exception)
+- [x] Dimension 6 Registry Safety: PASS
+- [x] Dimension 7 Inventory Provenance: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-10-16 (gsd-ui-checker: 5 PASS, 2 non-blocking FLAG; D-01, D-07, D-10 confirmed by user)
