@@ -1,4 +1,11 @@
-import { formatCurrency, formatPercent, formatPrice, formatQuantity, signClass } from "@/lib/format";
+import {
+  formatCurrency,
+  formatPercent,
+  formatPrice,
+  formatQuantity,
+  formatSignedCurrency,
+  signClass,
+} from "@/lib/format";
 
 /** The E2E suite's own rule for reading a figure back out of the DOM (test/tests/helpers.ts). */
 const parseNumber = (text: string) => Number(text.replace(/[^0-9.-]/g, ""));
@@ -36,6 +43,24 @@ describe("formatCurrency", () => {
     const text = formatCurrency(-1234567.891);
     expect(text).not.toMatch(/[KM]/);
     expect(text).not.toContain("−");
+  });
+});
+
+describe("formatSignedCurrency", () => {
+  it("puts an explicit sign on gains and losses", () => {
+    expect(formatSignedCurrency(12.34)).toBe("+$12.34");
+    expect(formatSignedCurrency(-12.34)).toBe("-$12.34");
+    expect(formatSignedCurrency(1234.5)).toBe("+$1,234.50");
+  });
+
+  it("shows zero and tiny values as an unsigned $0.00", () => {
+    expect(formatSignedCurrency(0)).toBe("$0.00");
+    expect(formatSignedCurrency(0.001)).toBe("$0.00");
+    expect(formatSignedCurrency(-0.004)).toBe("$0.00");
+  });
+
+  it("rounds half away from zero", () => {
+    expect(formatSignedCurrency(-0.005)).toBe("-$0.01");
   });
 });
 
