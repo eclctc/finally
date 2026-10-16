@@ -32,3 +32,12 @@ export function liveTotalValue(
   );
   return portfolio.cash_balance + positionsValue;
 }
+
+/** One position valued at the live price, falling back to the API price when the stream has none. */
+export function livePosition(position: PortfolioPosition, livePrice: number | undefined) {
+  const price = livePrice ?? position.current_price;
+  const marketValue = position.quantity * price;
+  const pnl = position.quantity * (price - position.avg_cost);
+  const pnlFraction = (price - position.avg_cost) / position.avg_cost;
+  return { price, marketValue, pnl, pnlFraction };
+}
