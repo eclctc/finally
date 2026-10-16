@@ -24,7 +24,7 @@ Edits and commits were made directly on branch `finally-gsd` (no worktree, per t
 
 ## Fixed Issues
 
-### WR-01: Dashboard test "selects the first watchlist ticker on a fresh load" races an effect-synced render
+### WR-01: Dashboard test "selects the first watchlist ticker on a fresh load" races an effect-synced render (reproduced flake)
 
 **Files modified:** `frontend/src/components/TradeBar.tsx`, `frontend/src/components/Dashboard.test.tsx`
 **Commit:** ffc40ac (shared with WR-03, one root cause)
@@ -41,7 +41,7 @@ Evidence (concurrent `vitest run Watchlist.test.tsx Dashboard.test.tsx`):
 **Commit:** ffc40ac
 **Applied fix:** The `hadSelection` ref is gone. "First selection" is derived from `seenSelection === null`, so the typed-text-survives-first-selection rule no longer depends on when React evaluates an updater. The existing TradeBar selection tests still pass. One small behavioural difference: if the selection returns to `null` (watchlist emptied) and then to a ticker, that counts as a first selection again and keeps typed text, as the review snippet specifies.
 
-### WR-02: Store-driven Watchlist and Dashboard tests assert synchronously on timing they do not control
+### WR-02: Store-driven Watchlist and Dashboard tests assert synchronously after `act` on timing they do not control
 
 **Files modified:** `frontend/src/components/Watchlist.test.tsx`, `frontend/src/components/Dashboard.test.tsx`
 **Commit:** 5cd2102
@@ -57,7 +57,7 @@ The 50 ms flash-lifetime race named in the review (`orders the row cells...`) di
 **Commit:** 2272d25
 **Applied fix:** `TradeBar` takes a new required `onUnconfirmed` prop. When the request fails with anything other than an `ApiError` (fetch rejection, unparseable 2xx body), it calls `onUnconfirmed` and shows "Could not confirm the order. Portfolio refreshed; check Positions before retrying." `Dashboard` passes `usePortfolio().refresh`. `ApiError` (server rejection) behaves as before. No retries or idempotency keys. Tests: the fetch-rejection test now asserts the new message and one `onUnconfirmed` call; a new test asserts a server 400 does not refresh. The shared `NETWORK_ERROR` copy in `api.ts` is unchanged (the watchlist still uses it).
 
-### WR-05: One failed watchlist reload replaces an already loaded list; reloads are unordered
+### WR-05: One failed watchlist reload replaces an already loaded list with "Reload the page"; reloads are unordered
 
 **Files modified:** `frontend/src/lib/useWatchlist.ts`, `frontend/src/components/Watchlist.test.tsx`
 **Commit:** 1db198c
