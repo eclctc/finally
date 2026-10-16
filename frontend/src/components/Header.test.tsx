@@ -1,16 +1,32 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Header } from "@/components/Header";
+import { mergeFrame } from "@/lib/priceStore";
 import { connectPriceStream, RECREATE_DELAY_MS } from "@/lib/priceStream";
 import { testIds } from "@/lib/testIds";
+import { jsonResponse, makeFrame, makeFrameEntry } from "@/test/fixtures";
 import type { FakeEventSource } from "../../vitest.setup";
 
 const Fake = globalThis.EventSource as unknown as typeof FakeEventSource;
 
 const parseNumber = (text: string) => Number(text.replace(/[^0-9.-]/g, ""));
 
-function stubPortfolio(body: { cash_balance: number; total_value: number }) {
-  const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => body }) as Response);
+const AAPL_POSITION = {
+  ticker: "AAPL",
+  quantity: 10,
+  avg_cost: 190,
+  current_price: 984.5178,
+  market_value: 9845.178,
+  unrealized_pnl: 0,
+  pnl_percent: 0,
+};
+
+function makePortfolio(cash: number, totalValue = cash, positions: object[] = []) {
+  return { cash_balance: cash, total_value: totalValue, positions_value: 0, unrealized_pnl: 0, positions };
+}
+
+function stubPortfolio(body: ReturnType<typeof makePortfolio>) {
+  const fetchMock = vi.fn(async () => jsonResponse(body));
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
@@ -29,7 +45,7 @@ describe("Header", () => {
   });
 
   it("shows the fetched portfolio as bare currency figures after one request", async () => {
-    const fetchMock = stubPortfolio({ cash_balance: 10000, total_value: 10000 });
+    const fetchMock = stubPortfolio(makePortfolio(10000));
     render(<Header />);
     await waitFor(() => expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$10,000.00"));
     expect(screen.getByTestId(testIds.totalValue).textContent).toBe("$10,000.00");
@@ -38,11 +54,32 @@ describe("Header", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/portfolio", undefined);
   });
 
-  it("puts cash and total value in the right elements", async () => {
-    stubPortfolio({ cash_balance: 2500.5, total_value: 12345.678 });
+  it("revalues the total at live prices while cash stays the same", async () => {
+    stubPortfolio(makePortfolio(2500.5, 12345.678, [AAPL_POSITION]));
     render(<Header />);
     await waitFor(() => expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$2,500.50"));
     expect(screen.getByTestId(testIds.totalValue).textContent).toBe("$12,345.68");
+
+    act(() => mergeFrame(makeFrame(makeFrameEntry("AAPL", 1000, 2))));
+    expect(screen.getByTestId(testIds.totalValue).textContent).toBe("$12,500.50");
+    expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$2,500.50");
+  });
+
+  it("ignores the API total_value", async () => {
+    stubPortfolio(makePortfolio(10000, 99999));
+    render(<Header />);
+    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$10,000.00"));
+    expect(screen.getByTestId(testIds.totalValue).textContent).toBe("$10,000.00");
+  });
+
+  it("never flashes the total or marks it as a live region", async () => {
+    stubPortfolio(makePortfolio(2500.5, 12345.678, [AAPL_POSITION]));
+    render(<Header />);
+    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$2,500.50"));
+    act(() => mergeFrame(makeFrame(makeFrameEntry("AAPL", 1000, 2))));
+    const total = screen.getByTestId(testIds.totalValue);
+    expect(total).not.toHaveAttribute("data-flash");
+    expect(total).not.toHaveAttribute("aria-live");
   });
 
   it("starts reconnecting", () => {
@@ -113,7 +150,7 @@ describe("Header", () => {
   });
 
   it("shows no alert while loading or after success", async () => {
-    stubPortfolio({ cash_balance: 10000, total_value: 10000 });
+    stubPortfolio(makePortfolio(10000));
     render(<Header />);
     expect(screen.queryByRole("alert")).toBeNull();
     await waitFor(() => expect(screen.getByTestId(testIds.cashBalance).textContent).toBe("$10,000.00"));
