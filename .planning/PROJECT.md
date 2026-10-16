@@ -25,13 +25,15 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 - ✓ `GET /api/health`, 400 `{"error": ...}` validation responses. Existing.
 - ✓ Dockerfile (multi-stage Node 22 → Python 3.12), start/stop scripts for macOS/Linux and Windows. Existing (build currently blocked by the missing frontend).
 - ✓ Playwright E2E suite in `test/` with `docker-compose.test.yml` (fresh start, watchlist, trading, portfolio charts, chat, SSE reconnect). Existing (currently unrunnable without a UI).
+- ✓ Next.js 16 static export in `frontend/`, built by the unchanged Dockerfile and served by FastAPI on :8000 — Phase 1
+- ✓ Tailwind 4 `@theme static` dark tokens (`#0d1117`/`#1a1a2e`, accent `#ecad0a`, blue `#209dd7`, purple `#753991`), system fonts, no third-party origins — Phase 1
+- ✓ Vitest + React Testing Library harness with ResizeObserver/EventSource/scrollIntoView stubs; shared `testIds`, `format`, `api` modules — Phase 1
+- ✓ `next dev` proxies `/api/*` to :8000 with unbuffered SSE (dev only) — Phase 1
 
 ### Active
 
 **Frontend (built fresh, PLAN.md §10):**
-- [ ] Next.js + TypeScript static export (`output: 'export'`) in `frontend/`, served by FastAPI from `static/`
-- [ ] Tailwind custom dark theme (`#0d1117`/`#1a1a2e` backgrounds, accent yellow `#ecad0a`, blue `#209dd7`, purple `#753991` submit buttons)
-- [ ] Header: live total portfolio value, cash balance, connection status dot (green/yellow/red)
+- [ ] Header: live total portfolio value, cash balance, connection status dot (green/yellow/red) — static header reading `/api/portfolio` shipped in Phase 1; live updates and dot in Phase 3
 - [ ] Watchlist panel: ticker, price with green/red flash (~500ms fade), daily change % vs session open, sparkline accumulated from SSE since page load, add/remove tickers
 - [ ] Main chart for the selected ticker (click a watchlist row to select)
 - [ ] Portfolio heatmap (Recharts Treemap) sized by weight, colored by P&L
@@ -41,7 +43,8 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 - [ ] AI chat panel: docked/collapsible, history, loading indicator, inline trade/watchlist confirmations and failures, inline 502 errors
 - [ ] `EventSource` SSE client with automatic reconnection
 - [ ] Recharts for all charts
-- [ ] Frontend unit tests with Vitest + React Testing Library
+- [ ] Frontend unit tests with Vitest + React Testing Library (harness in place since Phase 1; coverage grows per phase)
+- [ ] Layout keeps Chart and Heatmap usable at the 1024px minimum (UI review found ~68px cells; decide before Phase 3)
 
 **Backend hardening (from `.planning/codebase/CONCERNS.md`):**
 - [ ] Chat LLM path returns 502 (not 500) for empty or malformed LLM responses
@@ -89,6 +92,9 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 | Build the frontend fresh through GSD phases | The user chose a fresh build; the old code at `5681c3a` is reference only | — Pending |
 | Exclude cloud deploy, Docker hardening, and root cleanup | The user chose PLAN.md core only | — Pending |
 | Done = Docker build + working UI + passing E2E suite | Observable end-to-end proof of the core value | — Pending |
+| TypeScript 7, no ESLint; Tailwind `@theme static` tokens; system font stack | Small toolchain, no third-party font origin | ✓ Good — Phase 1 typecheck/build clean, same-origin UAT passed |
+| `output: 'export'` only outside dev, with a dev-only `/api` rewrite | Static export forbids rewrites; dev still needs same-origin API | ✓ Good — Phase 1 |
+| Exact npm pins, committed lockfile, `npm ci` in Docker | Supply-chain control for the too-new package set | ✓ Good — Phase 1 security review |
 
 ## Evolution
 
@@ -108,4 +114,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-16 after initialization*
+*Last updated: 2026-10-16 after Phase 1*

@@ -14,7 +14,7 @@ The build is run through GSD. Planning artifacts live in `.planning/` (PROJECT.m
 
 Roadmap: 1 Walking Skeleton, 2 Backend Hardening, 3 Live Watchlist & Header, 4 Trading & Portfolio, 5 AI Chat, 6 Ship & E2E Gate.
 
-Phase 1 (Walking Skeleton) status: all 4 plans executed and merged; awaiting human UAT.
+Phase 1 (Walking Skeleton) status: COMPLETE (UAT 3/3 passed, security 12/12 threats closed, UI review 20/24).
 - Next.js 16 static export with Tailwind 4 `@theme static` dark tokens, built by the unchanged Dockerfile (image `finally-phase1`, container `finally-p1` on :8000).
 - Vitest + RTL harness (35 tests), shared `testIds.ts`, `format.ts`, `api.ts`; Header reads `/api/portfolio`; 7-panel terminal layout.
 - `next dev` proxies `/api/*` to :8000 with unbuffered SSE (port 3000 is busy locally; use `-p 3100`).

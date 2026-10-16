@@ -9,12 +9,12 @@ The backend already exists. See PROJECT.md "Validated" for the existing capabili
 
 ### Foundation (scaffold, build, harness)
 
-- [ ] **FND-01**: `frontend/` is a Next.js 16 + TypeScript 7 + Tailwind 4 project. `npm run build` produces a static export in `out/`. Lockfile and `.gitignore` are committed.
-- [ ] **FND-02**: `docker build` succeeds with the existing multi-stage Dockerfile. The container serves the UI at `http://localhost:8000/`, and `/api/health` still responds.
-- [ ] **FND-03**: The dark terminal theme is defined as Tailwind tokens: backgrounds `#0d1117`/`#1a1a2e`, muted borders, accent yellow `#ecad0a`, blue `#209dd7`, purple `#753991` for submit buttons.
-- [ ] **FND-04**: The Vitest + React Testing Library harness runs with `npm test`. Its jsdom setup stubs `ResizeObserver`, `EventSource` and `scrollIntoView`.
-- [ ] **FND-05**: All E2E data-testids live in a single constants module. Shared number formatters render bare numbers where the E2E suite parses them (cash, total value, prices).
-- [ ] **FND-06**: Local dev works. `next dev` proxies `/api/*` to `:8000` without buffering SSE, and export mode is used only for production builds.
+- [x] **FND-01**: `frontend/` is a Next.js 16 + TypeScript 7 + Tailwind 4 project. `npm run build` produces a static export in `out/`. Lockfile and `.gitignore` are committed.
+- [x] **FND-02**: `docker build` succeeds with the existing multi-stage Dockerfile. The container serves the UI at `http://localhost:8000/`, and `/api/health` still responds.
+- [x] **FND-03**: The dark terminal theme is defined as Tailwind tokens: backgrounds `#0d1117`/`#1a1a2e`, muted borders, accent yellow `#ecad0a`, blue `#209dd7`, purple `#753991` for submit buttons.
+- [x] **FND-04**: The Vitest + React Testing Library harness runs with `npm test`. Its jsdom setup stubs `ResizeObserver`, `EventSource` and `scrollIntoView`.
+- [x] **FND-05**: All E2E data-testids live in a single constants module. Shared number formatters render bare numbers where the E2E suite parses them (cash, total value, prices).
+- [x] **FND-06**: Local dev works. `next dev` proxies `/api/*` to `:8000` without buffering SSE, and export mode is used only for production builds.
 
 ### Backend Hardening
 
@@ -72,14 +72,17 @@ The backend already exists. See PROJECT.md "Validated" for the existing capabili
 ## v2 Requirements
 
 ### Chat
+
 - **CHAT-V2-01**: Chat history restored on reload via a `GET /api/chat` endpoint
 
 ### Data
+
 - **DATA-V2-01**: Server-side bucketing or a `since` parameter for `/api/portfolio/history`
 - **DATA-V2-02**: Real historical price data and a timeframe selector for the main chart
 - **DATA-V2-03**: Cap on watchlist size
 
 ### Portfolio
+
 - **PORT-V2-01**: Realized P&L and trade blotter
 
 ## Out of Scope
@@ -103,12 +106,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 1 | Pending |
-| FND-02 | Phase 1 | Pending |
-| FND-03 | Phase 1 | Pending |
-| FND-04 | Phase 1 | Pending |
-| FND-05 | Phase 1 | Pending |
-| FND-06 | Phase 1 | Pending |
+| FND-01 | Phase 1 | Complete |
+| FND-02 | Phase 1 | Complete |
+| FND-03 | Phase 1 | Complete |
+| FND-04 | Phase 1 | Complete |
+| FND-05 | Phase 1 | Complete |
+| FND-06 | Phase 1 | Complete |
 | HARD-01 | Phase 2 | Pending |
 | HARD-02 | Phase 2 | Pending |
 | HARD-03 | Phase 2 | Pending |

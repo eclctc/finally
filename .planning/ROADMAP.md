@@ -12,7 +12,7 @@ The backend (market data, SSE, portfolio, watchlist, chat, SQLite) already exist
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Walking Skeleton** - Next.js static export with dark theme, test harness and testid contract, built and served by the Docker container
+- [x] **Phase 1: Walking Skeleton** - Next.js static export with dark theme, test harness and testid contract, built and served by the Docker container (completed 2026-10-16)
 - [ ] **Phase 2: Backend Hardening** - Chat and watchlist APIs fail cleanly with 502s, idempotent adds, per-action failures and action caps
 - [ ] **Phase 3: Live Watchlist & Header** - One SSE price store drives the watchlist rows, flashes, sparklines, connection dot and live header totals
 - [ ] **Phase 4: Trading & Portfolio** - Ticker selection, main chart, trade bar, positions table, heatmap and P&L chart
@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `next dev` serves the shell with `/api/*` proxied to the backend on `:8000`, and SSE frames from `/api/stream/prices` arrive unbuffered.
   5. The theme colors (`#0d1117`/`#1a1a2e`, muted borders, `#ecad0a`, `#209dd7`, `#753991`) are usable as Tailwind tokens, and every E2E testid and number formatter comes from one shared module.
 
-**Plans**: 4/4 plans executed
+**Plans**: 4/4 plans complete
 
 Plans:
 **Wave 1**
@@ -142,7 +142,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 2 has no
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Walking Skeleton | 4/4 | In Progress | - |
+| 1. Walking Skeleton | 4/4 | Complete    | 2026-10-16 |
 | 2. Backend Hardening | 0/TBD | Not started | - |
 | 3. Live Watchlist & Header | 0/TBD | Not started | - |
 | 4. Trading & Portfolio | 0/TBD | Not started | - |
