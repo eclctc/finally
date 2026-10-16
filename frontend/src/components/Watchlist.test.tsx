@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -468,5 +468,85 @@ describe("Watchlist remove", () => {
     expect(cells[2]).toBe(changeCell("AAPL"));
     expect(cells[3]).toHaveAttribute("title", "Since page load");
     expect(cells[4]).toBe(removeButton("AAPL"));
+  });
+});
+
+describe("Watchlist selection", () => {
+  const li = (ticker: string) => screen.getByTestId(testIds.watchlistRow(ticker));
+  const tickerSpan = (ticker: string) => within(li(ticker)).getByText(ticker);
+  const removeX = (ticker: string) => screen.getByTestId(testIds.watchlistRemove(ticker));
+
+  const watch = async (...tickers: string[]) => {
+    const fetchMock = stubApi(tickers.map((ticker) => makeWatchlistEntry(ticker, 100)));
+    const view = renderWatchlist();
+    await screen.findByTestId(testIds.watchlistRow(tickers[0]));
+    return { fetchMock, ...view };
+  };
+
+  it("selects the first ticker by default and no other", async () => {
+    await watch("MSFT", "AAPL");
+    await waitFor(() => expect(li("MSFT")).toHaveAttribute("aria-current", "true"));
+    expect(li("AAPL")).not.toHaveAttribute("aria-current");
+  });
+
+  it("moves the selection and its styles on click", async () => {
+    await watch("MSFT", "AAPL");
+    await userEvent.setup().click(li("AAPL"));
+    expect(li("AAPL")).toHaveAttribute("aria-current", "true");
+    expect(li("AAPL")).toHaveClass("bg-surface", "cursor-pointer");
+    expect(tickerSpan("AAPL")).toHaveClass("text-accent", "font-semibold");
+    expect(li("MSFT")).not.toHaveAttribute("aria-current");
+    expect(li("MSFT")).toHaveClass("hover:bg-surface/60", "cursor-pointer");
+    expect(tickerSpan("MSFT")).toHaveClass("text-text");
+    expect(tickerSpan("MSFT")).not.toHaveClass("text-accent");
+  });
+
+  it("makes every row focusable and selects on Enter and Space", async () => {
+    await watch("MSFT", "AAPL", "V");
+    expect(li("V")).toHaveAttribute("tabindex", "0");
+    const user = userEvent.setup();
+    li("AAPL").focus();
+    await user.keyboard("{Enter}");
+    expect(li("AAPL")).toHaveAttribute("aria-current", "true");
+    li("V").focus();
+    await user.keyboard(" ");
+    expect(li("V")).toHaveAttribute("aria-current", "true");
+  });
+
+  it("does not select when a key is pressed on the x button", async () => {
+    await watch("MSFT", "AAPL");
+    removeX("AAPL").focus();
+    fireEvent.keyDown(removeX("AAPL"), { key: "Enter" });
+    expect(li("AAPL")).not.toHaveAttribute("aria-current");
+  });
+
+  it("removes an unselected row with the x and keeps the selection", async () => {
+    await watch("MSFT", "AAPL");
+    await userEvent.setup().click(removeX("AAPL"));
+    await waitFor(() => expect(screen.queryByTestId(testIds.watchlistRow("AAPL"))).toBeNull());
+    expect(li("MSFT")).toHaveAttribute("aria-current", "true");
+  });
+
+  it("falls back to the first remaining ticker when the selected one is removed", async () => {
+    await watch("MSFT", "AAPL", "V");
+    const user = userEvent.setup();
+    await user.click(li("AAPL"));
+    await user.click(removeX("AAPL"));
+    await waitFor(() => expect(screen.queryByTestId(testIds.watchlistRow("AAPL"))).toBeNull());
+    await waitFor(() => expect(li("MSFT")).toHaveAttribute("aria-current", "true"));
+  });
+
+  it("leaves no selection after the last row is removed", async () => {
+    await watch("AAPL");
+    await userEvent.setup().click(removeX("AAPL"));
+    await waitFor(() => expect(screen.queryByTestId(testIds.watchlistRow("AAPL"))).toBeNull());
+    expect(document.querySelector("[aria-current]")).toBeNull();
+  });
+
+  it("shows a change of +0.004% as 0.00% in text-muted", async () => {
+    await watch("AAPL");
+    streamTick("AAPL", 190.0076, 190);
+    expect(changeCell("AAPL")).toHaveTextContent(/^0\.00%$/);
+    expect(changeCell("AAPL")).toHaveClass("text-muted");
   });
 });

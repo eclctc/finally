@@ -88,6 +88,19 @@ describe("Dashboard", () => {
     expect(screen.getByTestId(testIds.mainChart)).toHaveTextContent("NVDA");
   });
 
+  it("selects the first watchlist ticker on a fresh load", async () => {
+    vi.stubGlobal(
+      "fetch",
+      routeFetch({
+        "GET /api/watchlist": () =>
+          jsonResponse({ tickers: [makeWatchlistEntry("AAPL"), makeWatchlistEntry("MSFT")] }),
+      }),
+    );
+    render(<Dashboard />);
+    await waitFor(() => expect(screen.getByTestId(testIds.mainChart)).toHaveAttribute("data-ticker", "AAPL"));
+    expect(screen.getByTestId(testIds.tradeTicker)).toHaveValue("AAPL");
+  });
+
   it("still renders the header figures", () => {
     render(<Dashboard />);
     expect(screen.getByTestId(testIds.cashBalance)).toBeInTheDocument();

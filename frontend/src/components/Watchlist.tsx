@@ -70,6 +70,11 @@ export function Watchlist({ selectedTicker, onSelect }: WatchlistProps) {
   const errorId = useId();
 
   useEffect(() => {
+    if (tickers === null) return;
+    if (selectedTicker === null || !tickers.includes(selectedTicker)) onSelect(tickers[0] ?? null);
+  }, [tickers, selectedTicker, onSelect]);
+
+  useEffect(() => {
     if (scrollTarget === null) return;
     const row = listRef.current?.querySelector(`[data-testid="${testIds.watchlistRow(scrollTarget)}"]`);
     if (!row) return;
