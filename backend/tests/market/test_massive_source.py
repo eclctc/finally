@@ -108,6 +108,21 @@ async def test_startup_survives_failure_and_backfills():
     await source.stop()
 
 
+async def test_readd_keeps_session_open():
+    client = FakeClient()
+    cache = PriceCache()
+    source = MassiveDataSource(cache, client, poll_interval=60)
+    await source.start({"AAPL"})
+    open_price = cache.get("AAPL").open_price
+    client.known["AAPL"] = 200.0
+    await source.poll_once()
+    await source.remove_ticker("AAPL")
+    await source.add_ticker("AAPL")
+    assert cache.get("AAPL").open_price == open_price
+    assert cache.get_price("AAPL") == 200.0
+    await source.stop()
+
+
 async def test_removed_ticker_not_rewritten_by_inflight_poll():
     cache = PriceCache()
     source = MassiveDataSource(cache, FakeClient(), 60)

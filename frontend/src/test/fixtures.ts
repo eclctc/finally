@@ -1,39 +1,115 @@
-import type { Portfolio, Position, PriceUpdate } from "@/lib/types";
+import type { ChatAction, ChatReply } from "@/lib/chat";
+import type { Snapshot } from "@/lib/pnlSeries";
+import type { Portfolio, PortfolioPosition } from "@/lib/portfolioValue";
 
-export function priceUpdate(overrides: Partial<PriceUpdate> = {}): PriceUpdate {
-  return {
-    ticker: "AAPL",
-    price: 190,
-    previous_price: 189.5,
-    open_price: 188,
-    timestamp: 1000,
-    change: 0.5,
-    change_percent: 0.26,
-    direction: "up",
-    ...overrides,
-  };
-}
+/** Full SSE entry for one ticker; open price defaults to the price. */
+export const makeFrameEntry = (ticker: string, price: number, timestamp: number, openPrice = price) => ({
+  ticker,
+  price,
+  previous_price: price,
+  open_price: openPrice,
+  timestamp,
+  change: 0,
+  change_percent: 0,
+  direction: "flat",
+});
 
-export function position(overrides: Partial<Position> = {}): Position {
-  return {
-    ticker: "AAPL",
-    quantity: 10,
-    avg_cost: 180,
-    current_price: 185,
-    market_value: 1850,
-    unrealized_pnl: 50,
-    pnl_percent: 2.78,
-    ...overrides,
-  };
-}
+/** SSE frame keyed by ticker. */
+export const makeFrame = (...entries: ReturnType<typeof makeFrameEntry>[]) =>
+  Object.fromEntries(entries.map((entry) => [entry.ticker, entry]));
 
-export function portfolio(overrides: Partial<Portfolio> = {}): Portfolio {
+/** GET /api/watchlist entry: priced when a price is given, otherwise all price fields null. */
+export const makeWatchlistEntry = (ticker: string, price?: number) =>
+  price === undefined
+    ? {
+        ticker,
+        price: null,
+        previous_price: null,
+        open_price: null,
+        change: null,
+        change_percent: null,
+        direction: null,
+        timestamp: null,
+      }
+    : makeFrameEntry(ticker, price, 1);
+
+/** Minimal fetch Response carrying a JSON body. */
+export const jsonResponse = (body: unknown, status = 200) =>
+  ({ ok: status < 400, status, json: async () => body }) as Response;
+
+/** Held position at a current price; market value and P&L are derived from the inputs. */
+export const makePosition = (
+  ticker: string,
+  quantity: number,
+  avgCost: number,
+  currentPrice: number,
+): PortfolioPosition => ({
+  ticker,
+  quantity,
+  avg_cost: avgCost,
+  current_price: currentPrice,
+  market_value: quantity * currentPrice,
+  unrealized_pnl: quantity * (currentPrice - avgCost),
+  pnl_percent: ((currentPrice - avgCost) / avgCost) * 100,
+});
+
+/** GET /api/portfolio body: totals are derived from cash and positions. */
+export const makePortfolio = (cash: number, positions: PortfolioPosition[] = []): Portfolio => {
+  const positionsValue = positions.reduce((sum, position) => sum + position.market_value, 0);
   return {
-    cash_balance: 5000,
-    total_value: 6850,
-    positions_value: 1850,
-    unrealized_pnl: 50,
-    positions: [position()],
-    ...overrides,
+    cash_balance: cash,
+    total_value: cash + positionsValue,
+    positions_value: positionsValue,
+    unrealized_pnl: positions.reduce((sum, position) => sum + position.unrealized_pnl, 0),
+    positions,
   };
-}
+};
+
+/** POST /api/portfolio/trade 200 body. */
+export const makeTradeResponse = (
+  trade: { ticker: string; side: "buy" | "sell"; quantity: number; price: number },
+  portfolio: Portfolio,
+) => ({
+  trade: { id: "trade-1", executed_at: "2026-10-16T21:00:59.139123+00:00", ...trade },
+  portfolio,
+});
+
+/** GET /api/portfolio/history snapshot: the total value recorded at an ISO timestamp. */
+export const makeSnapshot = (totalValue: number, recordedAt: string): Snapshot => ({
+  total_value: totalValue,
+  recorded_at: recordedAt,
+});
+
+/** POST /api/chat 200 body. */
+export const makeChatReply = (message: string, actions: ChatAction[] = []): ChatReply => ({ message, actions });
+
+/** Executed trade action. */
+export const makeOkTrade = (
+  ticker: string,
+  side: "buy" | "sell",
+  quantity: number,
+  price: number,
+): ChatAction => ({ type: "trade", ticker, side, quantity, status: "ok", price });
+
+/** Failed trade action carrying the backend reason. */
+export const makeFailedTrade = (
+  ticker: string,
+  side: "buy" | "sell",
+  quantity: number,
+  error: string,
+): ChatAction => ({ type: "trade", ticker, side, quantity, status: "failed", error });
+
+/** Executed watchlist change. */
+export const makeOkWatchlistChange = (ticker: string, action: "add" | "remove"): ChatAction => ({
+  type: "watchlist",
+  ticker,
+  action,
+  status: "ok",
+});
+
+/** Failed watchlist change carrying the backend reason. */
+export const makeFailedWatchlistChange = (
+  ticker: string,
+  action: "add" | "remove",
+  error: string,
+): ChatAction => ({ type: "watchlist", ticker, action, status: "failed", error });

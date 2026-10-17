@@ -18,25 +18,28 @@ One Docker container serves everything on port 8000.
 
 ```bash
 cp .env.example .env        # add OPENROUTER_API_KEY for AI chat
-./scripts/start_mac.sh      # builds the image, runs on http://localhost:8000
+./scripts/start_mac.sh      # builds the image, waits for the app, opens http://localhost:8000
 ./scripts/stop_mac.sh       # stops the container; data persists in the finally-data volume
 ```
 
-Windows: `scripts/start_windows.ps1` and `scripts/stop_windows.ps1`. Pass `--build` / `-Build` to rebuild, `--no-open` / `-NoOpen` to skip opening the browser.
+Windows: `scripts/start_windows.ps1` and `scripts/stop_windows.ps1`. Pass `--build` / `-Build` to rebuild, `--no-open` / `-NoOpen` to skip opening the browser. Set `FINALLY_PORT`, `FINALLY_CONTAINER`, `FINALLY_IMAGE` or `FINALLY_VOLUME` to override the host port (default 8000), container name, image or data volume, for example `FINALLY_PORT=8001 ./scripts/start_mac.sh`.
 
 ## Development
 
 ```bash
 cd backend && uv run pytest                 # backend unit tests
 cd frontend && npm test                     # frontend unit tests
+cd frontend && npm run build                # static export to frontend/out/
 cd test && npm run test:docker              # Playwright E2E in Docker (LLM_MOCK=true)
 ```
 
 Run the backend locally: `cd backend && LLM_MOCK=true uv run uvicorn app.main:app --port 8000`.
 
+Then run the frontend dev server with `cd frontend && npm run dev` (serves http://localhost:3000 and proxies `/api/*` to the backend on :8000; use `npm run dev -- -p 3100` if port 3000 is busy).
+
 ## Configuration
 
-Copy `.env` values as needed:
+Set these in `.env` (copy `.env.example`):
 
 | Variable | Description |
 |---|---|

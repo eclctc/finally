@@ -13,6 +13,19 @@ $Volume = if ($env:FINALLY_VOLUME) { $env:FINALLY_VOLUME } else { "finally-data"
 $RootDir = Split-Path -Parent $PSScriptRoot
 $Url = "http://localhost:$Port"
 
+function Wait-FinAllyReady {
+    for ($i = 0; $i -lt 30; $i++) {
+        try {
+            Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 "$Url/api/health" | Out-Null
+            return
+        } catch {
+            Start-Sleep -Seconds 1
+        }
+    }
+    Write-Host "FinAlly did not become ready. Check: docker logs $Container"
+    exit 1
+}
+
 docker image inspect $Image *> $null
 if ($Build -or $LASTEXITCODE -ne 0) {
     Write-Host "Building image $Image..."
@@ -33,6 +46,9 @@ if ($Running -and -not $Build) {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     Write-Host "FinAlly started."
 }
+
+Write-Host "Waiting for FinAlly to be ready..."
+Wait-FinAllyReady
 
 Write-Host "Open $Url"
 if (-not $NoOpen) { Start-Process $Url }

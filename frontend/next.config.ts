@@ -7,14 +7,6 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   compress: false,
   agentRules: false,
-  turbopack: {
-    rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
-    },
-  },
   ...(isDev && {
     async rewrites() {
       return [{ source: "/api/:path*", destination: "http://localhost:8000/api/:path*" }];

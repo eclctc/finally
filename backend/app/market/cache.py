@@ -13,17 +13,21 @@ class PriceCache:
 
     def __init__(self) -> None:
         self._prices: dict[str, PriceUpdate] = {}
+        self._session_opens: dict[str, float] = {}  # survives remove() for the backend lifetime
         self.version = 0
 
     def update(self, ticker: str, price: float, timestamp: float | None = None) -> PriceUpdate:
-        """Record a new price. The first price seen for a ticker becomes its session open."""
+        """Record a new price. The first price seen since backend start is the session open.
+
+        The open survives `remove`, so a re-added ticker keeps its daily change.
+        """
         price = round(price, 2)
         previous = self._prices.get(ticker)
         update = PriceUpdate(
             ticker=ticker,
             price=price,
             previous_price=previous.price if previous else price,
-            open_price=previous.open_price if previous else price,
+            open_price=self._session_opens.setdefault(ticker, price),
             timestamp=timestamp if timestamp is not None else time.time(),
         )
         self._prices[ticker] = update

@@ -1,27 +1,24 @@
-import type { ConnectionStatus } from "@/lib/types";
+"use client";
 
-const DOT_COLORS: Record<ConnectionStatus, string> = {
-  connected: "bg-up",
-  reconnecting: "bg-accent",
-  disconnected: "bg-down",
-};
+import { useConnectionStatus } from "@/lib/usePrice";
+import { testIds } from "@/lib/testIds";
 
-const LABELS: Record<ConnectionStatus, string> = {
-  connected: "Live",
-  reconnecting: "Reconnecting",
-  disconnected: "Offline",
-};
+const STATUS_CLASS = { connected: "bg-up", reconnecting: "bg-accent", disconnected: "bg-down" };
+const STATUS_LABEL = { connected: "Connected", reconnecting: "Reconnecting", disconnected: "Disconnected" };
 
-/** Colored dot showing the price stream connection state. */
-export function ConnectionDot({ status }: { status: ConnectionStatus }) {
+/** Stream status dot; the hidden label is its accessible name and its live announcement. */
+export function ConnectionDot() {
+  const status = useConnectionStatus();
+  const label = STATUS_LABEL[status];
   return (
-    <div className="flex items-center gap-2 text-muted" title={`Price stream: ${LABELS[status]}`}>
-      <span
-        data-testid="connection-status"
-        data-status={status}
-        className={`inline-block h-2 w-2 rounded-full ${DOT_COLORS[status]}`}
-      />
-      <span>{LABELS[status]}</span>
-    </div>
+    <span
+      role="status"
+      data-testid={testIds.connectionStatus}
+      data-status={status}
+      title={label}
+      className={`relative size-2.5 shrink-0 rounded-full ${STATUS_CLASS[status]}`}
+    >
+      <span className="sr-only">{label}</span>
+    </span>
   );
 }

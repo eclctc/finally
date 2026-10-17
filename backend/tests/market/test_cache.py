@@ -33,6 +33,26 @@ def test_to_dict_has_sse_fields():
     assert payload["direction"] == "down"
 
 
+def test_open_survives_remove_and_readd():
+    cache = PriceCache()
+    cache.update("AAPL", 100.0)
+    cache.update("AAPL", 110.0)
+    cache.remove("AAPL")
+    readded = cache.update("AAPL", 120.0)
+    assert readded.open_price == 100.0
+    assert readded.price == 120.0
+    assert readded.previous_price == 120.0
+
+
+def test_readd_with_no_ticks_keeps_open_and_price():
+    cache = PriceCache()
+    cache.update("AAPL", 100.0)
+    cache.remove("AAPL")
+    readded = cache.update("AAPL", 100.0)
+    assert readded.open_price == 100.0
+    assert readded.price == 100.0
+
+
 def test_remove_bumps_version_only_when_present():
     cache = PriceCache()
     cache.update("AAPL", 190.0)

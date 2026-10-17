@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useChat } from "@/hooks/useChat";
-import { usePortfolio } from "@/hooks/usePortfolio";
-import { usePriceStream } from "@/hooks/usePriceStream";
-import { useWatchlist } from "@/hooks/useWatchlist";
-import { submitTrade } from "@/lib/api";
-import { revaluePortfolio } from "@/lib/portfolio";
-import type { TradeSide } from "@/lib/types";
-import { ChatPanel } from "./ChatPanel";
+import { useCallback, useEffect, useState } from "react";
+import { markAiChanged } from "@/lib/aiChangeStore";
+import type { ChatAction } from "@/lib/chat";
+import { aiChangeTargets, removedTickers } from "@/lib/chatEffects";
+import type { Portfolio } from "@/lib/portfolioValue";
+import { clearTicker } from "@/lib/priceStore";
+import { connectPriceStream } from "@/lib/priceStream";
+import { testIds } from "@/lib/testIds";
+import { usePortfolio } from "@/lib/usePortfolio";
+import { usePortfolioHistory } from "@/lib/usePortfolioHistory";
+import { useWatchlist } from "@/lib/useWatchlist";
+import { ChatDock } from "./ChatDock";
 import { Header } from "./Header";
 import { Heatmap } from "./Heatmap";
 import { MainChart } from "./MainChart";
@@ -18,76 +21,65 @@ import { PositionsTable } from "./PositionsTable";
 import { TradeBar } from "./TradeBar";
 import { Watchlist } from "./Watchlist";
 
-/** The full trading workstation: wires live data into every panel. */
+/** Terminal layout: header above the titled panels; owns the one shared portfolio source. */
 export function Dashboard() {
-  const { prices, history, status } = usePriceStream();
-  const { portfolio, snapshots, refresh: refreshPortfolio } = usePortfolio();
+  const { portfolio, failed, setPortfolio, refresh } = usePortfolio();
+  const { history, failed: historyFailed, refresh: refreshHistory } = usePortfolioHistory();
   const watchlist = useWatchlist();
+  const loadWatchlist = watchlist.load;
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
-  const [tradeTicker, setTradeTicker] = useState<string | null>(null);
-  const chat = useChat(() => {
-    refreshPortfolio();
-    watchlist.refresh();
-  });
+  useEffect(() => connectPriceStream(), []);
 
-  const livePortfolio = portfolio ? revaluePortfolio(portfolio, prices) : null;
-  const positions = livePortfolio?.positions ?? [];
-  const activeTicker = selectedTicker ?? watchlist.entries[0]?.ticker ?? null;
+  const handleFilled = useCallback(
+    (next: Portfolio) => {
+      setPortfolio(next);
+      refreshHistory();
+    },
+    [setPortfolio, refreshHistory],
+  );
 
-  function selectTicker(ticker: string) {
-    setSelectedTicker(ticker);
-    setTradeTicker(ticker);
-  }
+  const applyChatActions = useCallback(
+    async (actions: ChatAction[]) => {
+      if (!actions.some((action) => action.status === "ok")) return;
+      removedTickers(actions).forEach(clearTicker);
+      const refreshed = await Promise.all([loadWatchlist(), refresh(), refreshHistory()]);
+      if (!refreshed.every(Boolean)) return;
+      aiChangeTargets(actions).forEach(({ kind, ticker }) => markAiChanged(kind, ticker));
+    },
+    [loadWatchlist, refresh, refreshHistory],
+  );
 
-  async function trade(ticker: string, quantity: number, side: TradeSide) {
-    await submitTrade(ticker, quantity, side);
-    await refreshPortfolio();
-  }
+  const refreshAll = useCallback(() => {
+    loadWatchlist();
+    refresh();
+    refreshHistory();
+  }, [loadWatchlist, refresh, refreshHistory]);
 
   return (
-    <div className="flex h-screen min-w-[1024px] flex-col">
-      <Header
-        totalValue={livePortfolio?.total_value ?? null}
-        cashBalance={livePortfolio?.cash_balance ?? null}
-        unrealizedPnl={livePortfolio?.unrealized_pnl ?? null}
-        status={status}
-      />
-      <div className="flex min-h-0 flex-1">
-        <main className="grid min-h-0 flex-1 grid-cols-[minmax(300px,340px)_1fr] gap-px bg-line">
-          <Watchlist
-            entries={watchlist.entries}
-            prices={prices}
-            history={history}
-            selectedTicker={activeTicker}
-            onSelect={selectTicker}
-            onAdd={watchlist.add}
-            onRemove={watchlist.remove}
-          />
-          <div className="grid min-h-0 grid-cols-[1fr_1fr_260px] grid-rows-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-px">
-            <div className="col-span-2 min-h-0">
-              <MainChart
-                ticker={activeTicker}
-                points={activeTicker ? (history[activeTicker] ?? []) : []}
-                update={activeTicker ? prices[activeTicker] : undefined}
-              />
-            </div>
-            <Panel title="Trade">
-              <TradeBar ticker={tradeTicker ?? activeTicker ?? ""} onTickerChange={setTradeTicker} onTrade={trade} />
+    <div className="flex h-screen min-w-[1280px] flex-col bg-surface text-text">
+      <Header portfolio={portfolio} failed={failed} />
+      <div className="flex min-h-0 flex-1 gap-px bg-line">
+        <main className="grid min-h-0 min-w-0 flex-1 grid-cols-[320px_minmax(0,1fr)] gap-px">
+          <Watchlist watchlist={watchlist} selectedTicker={selectedTicker} onSelect={setSelectedTicker} />
+          <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_224px] grid-rows-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-px">
+            <Panel title="Chart" className="col-span-2">
+              <MainChart selectedTicker={selectedTicker} />
             </Panel>
-            <Heatmap positions={positions} />
-            <div className="col-span-2 min-h-0">
-              <PnlChart snapshots={snapshots} />
-            </div>
-            <div className="col-span-3 min-h-0">
-              <Panel title="Positions" className="h-full">
-                <div className="h-full overflow-auto">
-                  <PositionsTable positions={positions} onSelect={selectTicker} />
-                </div>
-              </Panel>
-            </div>
+            <Panel title="Trade">
+              <TradeBar selectedTicker={selectedTicker} onFilled={handleFilled} onUnconfirmed={refresh} />
+            </Panel>
+            <Panel title="Heatmap" testId={testIds.heatmap}>
+              <Heatmap portfolio={portfolio} failed={failed} />
+            </Panel>
+            <Panel title="P&L" testId={testIds.pnlChart} className="col-span-2">
+              <PnlChart history={history} failed={historyFailed} portfolio={portfolio} />
+            </Panel>
+            <Panel title="Positions" testId={testIds.positionsTable} className="col-span-3">
+              <PositionsTable portfolio={portfolio} failed={failed} />
+            </Panel>
           </div>
         </main>
-        <ChatPanel entries={chat.entries} loading={chat.loading} error={chat.error} onSend={chat.send} />
+        <ChatDock onActionsApplied={applyChatActions} onUnconfirmed={refreshAll} />
       </div>
     </div>
   );

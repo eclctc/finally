@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# the repo-root Python .gitignore ignores every lib/ directory; keep src/lib tracked
+!/src/lib/

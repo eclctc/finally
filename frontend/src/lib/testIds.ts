@@ -1,0 +1,35 @@
+/**
+ * Every data-testid the Playwright suite relies on; components and tests import from here.
+ * No other element inside the watchlist may use an id starting with `watchlist-row-`,
+ * because fresh-start.spec counts that prefix and expects exactly 10.
+ */
+export const testIds = {
+  connectionStatus: "connection-status",
+  cashBalance: "cash-balance",
+  totalValue: "total-value",
+  watchlist: "watchlist",
+  watchlistAddInput: "watchlist-add-input",
+  watchlistAddButton: "watchlist-add-button",
+  mainChart: "main-chart",
+  tradeTicker: "trade-ticker",
+  tradeQuantity: "trade-quantity",
+  tradeBuy: "trade-buy",
+  tradeSell: "trade-sell",
+  tradeError: "trade-error",
+  positionsTable: "positions-table",
+  heatmap: "heatmap",
+  pnlChart: "pnl-chart",
+  chatPanel: "chat-panel",
+  chatInput: "chat-input",
+  chatSend: "chat-send",
+  chatLoading: "chat-loading",
+  chatMessage: "chat-message",
+  chatAction: "chat-action",
+  chatError: "chat-error",
+  chatChip: "chat-chip",
+  chatToggle: "chat-toggle",
+  watchlistRow: (ticker: string) => `watchlist-row-${ticker}`,
+  watchlistPrice: (ticker: string) => `watchlist-price-${ticker}`,
+  watchlistRemove: (ticker: string) => `watchlist-remove-${ticker}`,
+  positionRow: (ticker: string) => `position-row-${ticker}`,
+} as const;

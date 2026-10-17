@@ -47,3 +47,6 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     actions TEXT,
     created_at TEXT NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_snapshots_user_time ON portfolio_snapshots (user_id, recorded_at);
+CREATE INDEX IF NOT EXISTS idx_chat_user_time ON chat_messages (user_id, created_at);

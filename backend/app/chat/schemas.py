@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TradeInstruction(BaseModel):
@@ -10,7 +10,7 @@ class TradeInstruction(BaseModel):
 
     ticker: str
     side: Literal["buy", "sell"]
-    quantity: float
+    quantity: float = Field(allow_inf_nan=False)  # a non-finite quantity cannot be serialized in the JSON response
 
 
 class WatchlistChange(BaseModel):

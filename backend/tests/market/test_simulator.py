@@ -60,13 +60,28 @@ def test_events_jump(monkeypatch):
     assert 0.015 < abs(after / before - 1) < 0.055
 
 
-def test_remove_and_readd_restarts_at_seed():
+def test_remove_and_readd_resumes_at_last_price():
     simulator = GBMSimulator(random.Random(0))
     simulator.add("AAPL")
     simulator.step()
+    last = simulator.prices["AAPL"]
     simulator.remove("AAPL")
     assert "AAPL" not in simulator.step()
-    assert simulator.add("AAPL") == 190.0
+    assert simulator.add("AAPL") == last
+
+
+async def test_readd_keeps_session_open_and_resumes_price():
+    cache = PriceCache()
+    source = SimulatorDataSource(cache, GBMSimulator(random.Random(0)))
+    await source.add_ticker("ZZZZ")
+    open_price = cache.get("ZZZZ").open_price
+    for ticker, price in source.simulator.step().items():
+        cache.update(ticker, price)
+    last_price = cache.get_price("ZZZZ")
+    await source.remove_ticker("ZZZZ")
+    await source.add_ticker("ZZZZ")
+    assert cache.get("ZZZZ").open_price == open_price
+    assert cache.get_price("ZZZZ") == last_price
 
 
 async def test_data_source_seeds_cache_and_ticks(monkeypatch):

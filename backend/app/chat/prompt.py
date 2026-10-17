@@ -2,7 +2,9 @@
 
 import json
 
-SYSTEM_PROMPT = """You are FinAlly, an AI trading assistant inside a simulated trading workstation.
+MAX_ACTIONS_PER_KIND = 5  # shared by the prompt text and the service-level cap
+
+SYSTEM_PROMPT = f"""You are FinAlly, an AI trading assistant inside a simulated trading workstation.
 The user trades a virtual portfolio with fake money. Market orders fill instantly at the current price.
 
 Your job:
@@ -15,6 +17,7 @@ Your job:
 Rules:
 - Only trade what the user has cash or shares for. Quantities must be positive; fractional shares are allowed.
 - Tickers are uppercase symbols of 1 to 5 letters.
+- List at most {MAX_ACTIONS_PER_KIND} trades and {MAX_ACTIONS_PER_KIND} watchlist changes per reply; extra items are skipped.
 - Earlier assistant turns list the actions that ran and whether they failed; take failures into account.
 - Always respond with JSON matching the schema: "message" (string), "trades" (array), "watchlist_changes" (array).
   Use empty arrays when there is nothing to do."""

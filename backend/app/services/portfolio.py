@@ -1,4 +1,4 @@
-from app.db import repository
+from app.db import repository, savepoint
 from app.db.models import Position, Trade
 from app.errors import ValidationError
 from app.market import MarketDataSource, PriceCache
@@ -10,7 +10,7 @@ QUANTITY_TOLERANCE = 1e-9  # float residue below this counts as zero shares
 
 
 def execute_trade(conn, cache: PriceCache, ticker: str, side: str, quantity: float) -> Trade:
-    """Validate and fill a market order at the cached price, in one transaction.
+    """Validate and fill a market order at the cached price, as one atomic unit.
 
     Buys update the weighted average cost; sells leave it unchanged and delete
     the position when it reaches zero. Raises ValidationError.
@@ -25,7 +25,7 @@ def execute_trade(conn, cache: PriceCache, ticker: str, side: str, quantity: flo
     if price is None:
         raise ValidationError(f"Unknown ticker: {ticker}")
 
-    with conn:
+    with savepoint(conn):
         if side == "buy":
             _apply_buy(conn, ticker, quantity, price)
         else:
@@ -62,12 +62,13 @@ def _apply_sell(conn, ticker: str, quantity: float, price: float) -> None:
 async def execute_trade_and_sync(
     conn, cache: PriceCache, source: MarketDataSource, ticker: str, side: str, quantity: float
 ) -> Trade:
-    """Execute a trade, stop pricing a closed unwatched position, and record a snapshot."""
-    trade = execute_trade(conn, cache, ticker, side, quantity)
+    """Record a trade and its snapshot as one unit, then stop pricing a closed, unwatched position."""
+    with savepoint(conn):
+        trade = execute_trade(conn, cache, ticker, side, quantity)
+        record_portfolio_snapshot(conn, cache)
     closed = not repository.has_position(conn, trade.ticker)
     if trade.side == "sell" and closed and not repository.is_watched(conn, trade.ticker):
         await source.remove_ticker(trade.ticker)
-    record_portfolio_snapshot(conn, cache)
     return trade
 
 
