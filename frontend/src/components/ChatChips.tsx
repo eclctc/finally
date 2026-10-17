@@ -15,12 +15,11 @@ export function ChatChips({ chat }: { chat: ChatState }) {
             key={prompt}
             type="button"
             data-testid={testIds.chatChip}
-            disabled={chat.pending}
             onClick={() => {
               chat.setDraft(prompt);
               chat.send(prompt);
             }}
-            className="h-7 border border-line bg-panel px-2 text-text hover:border-primary disabled:opacity-50 focus-visible:outline-2 outline-primary"
+            className="h-7 border border-line bg-panel px-2 text-text hover:border-primary focus-visible:outline-2 outline-primary"
           >
             {prompt}
           </button>

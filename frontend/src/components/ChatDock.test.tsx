@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -326,12 +324,6 @@ describe("ChatDock empty state and quick prompts", () => {
     expect(chips()).toHaveLength(0);
     const order = screen.getAllByTestId(testIds.chatMessage).map((node) => node.getAttribute("data-role"));
     expect(order).toEqual(["user", "assistant", "user", "assistant"]);
-  });
-
-  it("the chip source disables chips while a reply is pending", () => {
-    const source = readFileSync(resolve(__dirname, "ChatChips.tsx"), "utf8");
-    expect(source).toContain("disabled={chat.pending}");
-    expect(source).toContain("disabled:opacity-50");
   });
 });
 
