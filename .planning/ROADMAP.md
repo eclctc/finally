@@ -164,7 +164,7 @@ Research flag: spike the Recharts 3 Treemap custom `content` renderer first. It 
   4. After a reply with successful actions, the watchlist, positions, cash and P&L chart refresh without a reload, and the rows the AI changed are briefly highlighted.
   5. A chat error (502) shows inline in the panel and the user's typed input is kept. Quick-prompt chips offer starter questions that contain no mock-trigger keywords (buy, sell, add).
 
-**Plans**: 3/6 plans executed
+**Plans**: 5/6 plans executed
 
 Plans:
 **Wave 1**
@@ -175,8 +175,8 @@ Plans:
 - [x] 05-03-PLAN.md — useWatchlist lifted into Dashboard; AI adds and removes reload the watchlist, removals clear the price store, load reports success (CHAT-05)
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 05-04-PLAN.md — AI-change highlight store (1.5 s hold, 1 s fade) and data-ai-changed on position and watchlist rows, marked only after a fully successful refresh (CHAT-05, D-03)
-- [ ] 05-05-PLAN.md — Panel actions prop; collapse to a 40px rail and expand with the conversation, draft, pending request and error kept; focus rules (CHAT-01)
+- [x] 05-04-PLAN.md — AI-change highlight store (1.5 s hold, 1 s fade) and data-ai-changed on position and watchlist rows, marked only after a fully successful refresh (CHAT-05, D-03)
+- [x] 05-05-PLAN.md — Panel actions prop; collapse to a 40px rail and expand with the conversation, draft, pending request and error kept; focus rules (CHAT-01)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 05-06-PLAN.md — Phase gate: rebuilt container passes chat.spec.ts and the whole Playwright suite on a fresh database; backend suite; browser UAT (all CHAT requirements)
@@ -210,5 +210,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 2 has no
 | 2. Backend Hardening | 6/6 | Complete    | 2026-10-16 |
 | 3. Live Watchlist & Header | 5/5 | Complete    | 2026-10-16 |
 | 4. Trading & Portfolio | 7/7 | Complete    | 2026-10-16 |
-| 5. AI Chat | 3/6 | In Progress | - |
+| 5. AI Chat | 5/6 | In Progress | - |
 | 6. Ship & E2E Gate | 0/TBD | Not started | - |
