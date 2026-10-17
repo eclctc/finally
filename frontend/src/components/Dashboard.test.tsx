@@ -305,6 +305,30 @@ describe("Dashboard", () => {
     expect(screen.getByTestId(testIds.chatInput)).toHaveValue("");
   });
 
+  it("an AI buy highlights the new position row", async () => {
+    const portfolios = [makePortfolio(10000), makePortfolio(9809.88, [makePosition("AAPL", 1, 190.1234, 190.1234)])];
+    vi.stubGlobal(
+      "fetch",
+      routeFetch({
+        "GET /api/watchlist": () => jsonResponse({ tickers: [makeWatchlistEntry("AAPL")] }),
+        "GET /api/portfolio": () => jsonResponse(portfolios.length > 1 ? portfolios.shift() : portfolios[0]),
+        "GET /api/portfolio/history": () => jsonResponse({ snapshots: [] }),
+        "POST /api/chat": () =>
+          jsonResponse(makeChatReply("Done. Buying 1 share of AAPL.", [makeOkTrade("AAPL", "buy", 1, 190.1234)])),
+      }),
+    );
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance)).toHaveTextContent("$10,000.00"));
+
+    await user.type(screen.getByTestId(testIds.chatInput), "Please buy some Apple");
+    await user.click(screen.getByTestId(testIds.chatSend));
+
+    await waitFor(() =>
+      expect(screen.getByTestId(testIds.positionRow("AAPL"))).toHaveAttribute("data-ai-changed", "true"),
+    );
+  });
+
   it("an AI add shows the new watchlist row without a reload", async () => {
     const watchlists = [
       { tickers: [makeWatchlistEntry("AAPL")] },
