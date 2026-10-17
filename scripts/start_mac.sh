@@ -9,6 +9,16 @@ PORT="${FINALLY_PORT:-8000}"
 VOLUME="${FINALLY_VOLUME:-finally-data}"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 URL="http://localhost:${PORT}"
+HEALTH_CHECK="import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=2)"
+
+wait_until_ready() {
+  for _ in $(seq 1 30); do
+    docker exec "$CONTAINER" python -c "$HEALTH_CHECK" >/dev/null 2>&1 && return 0
+    sleep 1
+  done
+  echo "FinAlly did not become ready. Check: docker logs $CONTAINER" >&2
+  exit 1
+}
 
 BUILD=false
 OPEN=true
@@ -40,6 +50,9 @@ else
     "$IMAGE" >/dev/null
   echo "FinAlly started."
 fi
+
+echo "Waiting for FinAlly to be ready..."
+wait_until_ready
 
 echo "Open $URL"
 if $OPEN; then
