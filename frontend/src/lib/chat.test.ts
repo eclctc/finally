@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { describeAction } from "@/lib/chat";
+import { describeAction, QUICK_PROMPTS } from "@/lib/chat";
+import { testIds } from "@/lib/testIds";
 import {
   makeFailedTrade,
   makeFailedWatchlistChange,
@@ -40,5 +41,19 @@ describe("describeAction", () => {
   it("keeps a 120-character reason whole", () => {
     const reason = "x".repeat(120);
     expect(describeAction(makeFailedTrade("AAPL", "sell", 1, reason))).toBe(`SELL 1 AAPL failed - ${reason}`);
+  });
+});
+
+describe("QUICK_PROMPTS", () => {
+  it("holds exactly the three starter questions in order", () => {
+    expect([...QUICK_PROMPTS]).toEqual(["Analyze my portfolio", "What is my biggest risk?", "Summarize my P&L"]);
+  });
+
+  it("never contains a word the mock LLM turns into a trade or watchlist change", () => {
+    for (const prompt of QUICK_PROMPTS) expect(prompt).not.toMatch(/buy|sell|add/i);
+  });
+
+  it("has a chip test id", () => {
+    expect(testIds.chatChip).toBe("chat-chip");
   });
 });

@@ -1,12 +1,20 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { testIds } from "@/lib/testIds";
 import type { ChatState } from "@/lib/useChat";
 import { ChatBubble } from "./ChatBubble";
+import { ChatChips } from "./ChatChips";
 
 /** Scrolling conversation: committed bubbles, the in-flight or failed attempt, and its error. */
 export function ChatTranscript({ chat }: { chat: ChatState }) {
   const { messages, attempt } = chat;
+  const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [messages, attempt]);
+
   return (
     <div
       role="log"
@@ -15,6 +23,7 @@ export function ChatTranscript({ chat }: { chat: ChatState }) {
       className="min-h-0 flex-1 overflow-y-auto bg-surface p-2 focus-visible:outline-2 outline-primary"
     >
       <div className="flex flex-col gap-2">
+        {messages.length === 0 && attempt === null && <ChatChips chat={chat} />}
         {messages.map((message, index) => (
           <ChatBubble key={index} {...message} />
         ))}
@@ -31,6 +40,7 @@ export function ChatTranscript({ chat }: { chat: ChatState }) {
           </div>
         )}
       </div>
+      <div ref={endRef} aria-hidden="true" />
     </div>
   );
 }

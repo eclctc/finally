@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -252,5 +254,90 @@ describe("ChatDock keyboard and input", () => {
     await user.click(sendButton());
     await waitFor(() => expect(bubbles("assistant")).toHaveLength(2));
     expect(sentBody(fetchStub, 1)).toEqual({ message: "a\nb" });
+  });
+});
+
+const chips = () => screen.queryAllByTestId(testIds.chatChip);
+const EMPTY_LINE = "Ask FinAlly about your portfolio.";
+
+describe("ChatDock empty state and quick prompts", () => {
+  it("a fresh dock shows the empty line, three chips in order and the composer", () => {
+    renderDock(vi.fn());
+    expect(screen.getByText(EMPTY_LINE)).toHaveClass("text-muted");
+    expect(chips().map((chip) => chip.textContent)).toEqual([
+      "Analyze my portfolio",
+      "What is my biggest risk?",
+      "Summarize my P&L",
+    ]);
+    for (const chip of chips()) expect(chip).toHaveAttribute("type", "button");
+    expect(input()).toBeInTheDocument();
+    expect(sendButton()).toBeInTheDocument();
+  });
+
+  it("clicking a chip sends its label at once and removes the chips", async () => {
+    const user = userEvent.setup();
+    const deferred = deferredFetch();
+    renderDock(deferred.stub);
+    await user.click(screen.getByRole("button", { name: "What is my biggest risk?" }));
+
+    await screen.findByTestId(testIds.chatLoading);
+    expect(deferred.stub).toHaveBeenCalledTimes(1);
+    expect(sentBody(deferred.stub)).toEqual({ message: "What is my biggest risk?" });
+    expect(input()).toHaveValue("What is my biggest risk?");
+    expect(chips()).toHaveLength(0);
+    expect(screen.queryByText(EMPTY_LINE)).not.toBeInTheDocument();
+  });
+
+  it("a failed chip send keeps the label in the composer and the chips gone", async () => {
+    const user = userEvent.setup();
+    renderDock(vi.fn(() => Promise.resolve(jsonResponse({ error: TIMEOUT_ERROR }, 502))));
+    await user.click(screen.getByRole("button", { name: "Summarize my P&L" }));
+
+    await screen.findByTestId(testIds.chatError);
+    expect(input()).toHaveValue("Summarize my P&L");
+    expect(chips()).toHaveLength(0);
+    expect(screen.queryByText(EMPTY_LINE)).not.toBeInTheDocument();
+  });
+
+  it("chips never return, and two exchanges render four bubbles in send order", async () => {
+    const user = userEvent.setup();
+    const replies = ["first reply", "second reply"];
+    const fetchStub = vi.fn(() => Promise.resolve(jsonResponse(makeChatReply(replies.shift() as string))));
+    renderDock(fetchStub);
+    await user.click(screen.getByRole("button", { name: "Analyze my portfolio" }));
+    await waitFor(() => expect(bubbles("assistant")).toHaveLength(1));
+    expect(chips()).toHaveLength(0);
+
+    await user.type(input(), "and now?");
+    await user.click(sendButton());
+    await waitFor(() => expect(bubbles("assistant")).toHaveLength(2));
+
+    expect(chips()).toHaveLength(0);
+    const order = screen.getAllByTestId(testIds.chatMessage).map((node) => node.getAttribute("data-role"));
+    expect(order).toEqual(["user", "assistant", "user", "assistant"]);
+  });
+
+  it("the chip source disables chips while a reply is pending", () => {
+    const source = readFileSync(resolve(__dirname, "ChatChips.tsx"), "utf8");
+    expect(source).toContain("disabled={chat.pending}");
+    expect(source).toContain("disabled:opacity-50");
+  });
+});
+
+describe("ChatDock scroll to newest", () => {
+  it("scrolls the sentinel into view on send and again on the reply", async () => {
+    const user = userEvent.setup();
+    const deferred = deferredFetch();
+    renderDock(deferred.stub);
+    const scrollIntoView = vi.mocked(window.HTMLElement.prototype.scrollIntoView);
+    scrollIntoView.mockClear();
+    await user.type(input(), "hello");
+    await user.click(sendButton());
+    await screen.findByTestId(testIds.chatLoading);
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "end" });
+
+    scrollIntoView.mockClear();
+    await act(async () => deferred.resolve(jsonResponse(makeChatReply("Hi."))));
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "end" });
   });
 });
