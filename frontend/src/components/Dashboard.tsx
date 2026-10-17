@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { ChatAction } from "@/lib/chat";
+import { removedTickers } from "@/lib/chatEffects";
 import type { Portfolio } from "@/lib/portfolioValue";
+import { clearTicker } from "@/lib/priceStore";
 import { connectPriceStream } from "@/lib/priceStream";
 import { testIds } from "@/lib/testIds";
 import { usePortfolio } from "@/lib/usePortfolio";
@@ -38,6 +40,7 @@ export function Dashboard() {
   const applyChatActions = useCallback(
     async (actions: ChatAction[]) => {
       if (!actions.some((action) => action.status === "ok")) return;
+      removedTickers(actions).forEach(clearTicker);
       await Promise.all([loadWatchlist(), refresh(), refreshHistory()]);
     },
     [loadWatchlist, refresh, refreshHistory],

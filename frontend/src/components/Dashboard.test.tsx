@@ -2,11 +2,15 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/Dashboard";
+import { getEntry, mergeFrame } from "@/lib/priceStore";
 import { testIds } from "@/lib/testIds";
 import {
   jsonResponse,
   makeChatReply,
   makeFailedTrade,
+  makeFailedWatchlistChange,
+  makeFrame,
+  makeFrameEntry,
   makeOkTrade,
   makeOkWatchlistChange,
   makePortfolio,
@@ -325,6 +329,67 @@ describe("Dashboard", () => {
 
     expect(await screen.findByTestId(testIds.watchlistRow("PYPL"))).toBeInTheDocument();
     expect(watchlistGets()).toHaveLength(2);
+  });
+
+  it("an AI remove clears the price store, drops the row and moves the chart to the first remaining ticker", async () => {
+    const watchlists = [
+      { tickers: [makeWatchlistEntry("AAPL"), makeWatchlistEntry("MSFT")] },
+      { tickers: [makeWatchlistEntry("MSFT")] },
+    ];
+    vi.stubGlobal(
+      "fetch",
+      routeFetch({
+        "GET /api/watchlist": () => jsonResponse(watchlists.length > 1 ? watchlists.shift() : watchlists[0]),
+        "GET /api/portfolio": () => jsonResponse(makePortfolio(10000)),
+        "GET /api/portfolio/history": () => jsonResponse({ snapshots: [] }),
+        "POST /api/chat": () =>
+          jsonResponse(makeChatReply("Removed AAPL.", [makeOkWatchlistChange("AAPL", "remove")])),
+      }),
+    );
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    await waitFor(() => expect(screen.getByTestId(testIds.mainChart)).toHaveAttribute("data-ticker", "AAPL"));
+    await act(async () => {});
+    act(() => mergeFrame(makeFrame(makeFrameEntry("AAPL", 190, 1))));
+    expect(getEntry("AAPL")).toBeDefined();
+
+    await user.type(screen.getByTestId(testIds.chatInput), "Remove Apple");
+    await user.click(screen.getByTestId(testIds.chatSend));
+
+    await waitFor(() => expect(screen.queryByTestId(testIds.watchlistRow("AAPL"))).not.toBeInTheDocument());
+    expect(getEntry("AAPL")).toBeUndefined();
+    await waitFor(() => expect(screen.getByTestId(testIds.mainChart)).toHaveAttribute("data-ticker", "MSFT"));
+  });
+
+  it("a failed AI remove keeps the price store and reloads nothing", async () => {
+    const fetchMock = routeFetch({
+      "GET /api/watchlist": () =>
+        jsonResponse({ tickers: [makeWatchlistEntry("AAPL"), makeWatchlistEntry("MSFT")] }),
+      "GET /api/portfolio": () => jsonResponse(makePortfolio(10000)),
+      "GET /api/portfolio/history": () => jsonResponse({ snapshots: [] }),
+      "POST /api/chat": () =>
+        jsonResponse(
+          makeChatReply("I could not remove it.", [
+            makeFailedWatchlistChange("AAPL", "remove", "AAPL is not on the watchlist"),
+          ]),
+        ),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    await act(async () => {});
+    act(() => mergeFrame(makeFrame(makeFrameEntry("AAPL", 190, 1))));
+
+    await user.type(screen.getByTestId(testIds.chatInput), "Remove Apple");
+    await user.click(screen.getByTestId(testIds.chatSend));
+
+    expect(await screen.findByText("I could not remove it.")).toBeInTheDocument();
+    await act(async () => {});
+    expect(getEntry("AAPL")).toBeDefined();
+    expect(screen.getByTestId(testIds.watchlistRow("AAPL"))).toBeInTheDocument();
+    expect(fetchMock.mock.calls.filter(([path]) => path === "/api/watchlist")).toHaveLength(1);
   });
 
   it.each([

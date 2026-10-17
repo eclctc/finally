@@ -7,6 +7,7 @@ import { clearTicker, seedPrices, type FrameEntry } from "./priceStore";
 /**
  * Owns watchlist membership: ticker names in GET /api/watchlist order (null until the first load settles), plus add and remove.
  * A load applies only if no newer load started since, and `loadFailed` is true only while nothing has loaded.
+ * `load` resolves true when it applied a list and false when it failed or was superseded; it never rejects.
  */
 export function useWatchlist() {
   const [tickers, setTickers] = useState<string[] | null>(null);
@@ -17,16 +18,18 @@ export function useWatchlist() {
 
   const latestLoad = useRef(0);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<boolean> => {
     const mine = ++latestLoad.current;
     try {
       const { tickers: list } = await request<{ tickers: FrameEntry[] }>("/api/watchlist");
-      if (latestLoad.current !== mine) return;
+      if (latestLoad.current !== mine) return false;
       seedPrices(Object.fromEntries(list.map((entry) => [entry.ticker, entry])));
       setTickers(list.map((entry) => entry.ticker));
       setLoadFailed(false);
+      return true;
     } catch {
       if (latestLoad.current === mine) setLoadFailed(true);
+      return false;
     }
   }, []);
 
