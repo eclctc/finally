@@ -14,11 +14,11 @@ last_mapped_at: 2026-10-16
 **Secondary:**
 - Bash - Start/stop scripts in `scripts/start_mac.sh`, `scripts/stop_mac.sh`
 - PowerShell - Start/stop scripts in `scripts/start_windows.ps1`, `scripts/stop_windows.ps1`
-- TypeScript - E2E tests in `test/tests/*.spec.ts` and `test/playwright.config.ts` only
+- TypeScript - Frontend app in `frontend/src/` and E2E tests in `test/tests/*.spec.ts`
 - SQL - Schema in `backend/app/db/schema.sql`
 
 **Frontend:**
-- Not present. The `frontend/` directory exists but is empty (the Next.js project was deleted in commit `065e016`). The PLAN specifies Next.js + TypeScript + Tailwind + Recharts, but none of it is on disk.
+- Next.js 16 static export in `frontend/` (React 19, TypeScript 7, Tailwind 4, Recharts 3; Vitest + React Testing Library), built by `Dockerfile` stage 1
 
 ## Runtime
 
@@ -26,8 +26,8 @@ last_mapped_at: 2026-10-16
 - Python 3.12 in the container (`python:3.12-slim` base in `Dockerfile`)
 - `backend/pyproject.toml` declares `requires-python = ">=3.12"`; `backend/.python-version` is `3.12`
 - Root `pyproject.toml` (project name `finally`) declares `requires-python = ">=3.14"` and root `.python-version` is `3.14`. This root project is not used by the Dockerfile or by `backend/`. The root `.venv/` is a Python 3.14 environment.
-- Node 22 (`node:22-slim`) is referenced in `Dockerfile` for the frontend build stage, which currently cannot run because `frontend/` is empty
-- Node/npm is used only for the E2E test project in `test/`
+- Node 22 (`node:22-slim`) is referenced in `Dockerfile` for the frontend build stage
+- Node/npm builds and tests `frontend/` and runs the E2E project in `test/`
 
 **Package Manager:**
 - uv (Astral) - Python dependency management for `backend/`
@@ -114,17 +114,12 @@ last_mapped_at: 2026-10-16
 - Python 3.12+ and uv for backend (`cd backend && uv run pytest`)
 - Docker for the full container; `scripts/start_mac.sh` also uses `open` / `xdg-open`
 - Node.js and npm for E2E tests in `test/`
-- Frontend build requires Node 22 once `frontend/` is restored
+- Frontend build requires Node 22
 
 **Production:**
 - Single Docker container, single uvicorn worker, port 8000
 - Named volume for SQLite persistence
 - Deployment target per PLAN: any container platform (AWS App Runner, Render). No deployment config is present beyond `docker-compose.yml`.
-
-## Known Build Blockers
-
-- `Dockerfile` stage 1 copies `frontend/package.json`, `frontend/package-lock.json`, and `frontend/` source. With `frontend/` empty, `docker build` will fail at the `COPY frontend/package.json` step.
-- `scripts/start_mac.sh` and `docker-compose.yml` depend on that image build.
 
 ---
 
