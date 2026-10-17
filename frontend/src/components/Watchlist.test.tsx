@@ -5,11 +5,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Watchlist } from "@/components/Watchlist";
 import { EMPTY_SERIES, getEntry, getSeries, mergeFrame } from "@/lib/priceStore";
 import { testIds } from "@/lib/testIds";
+import { useWatchlist } from "@/lib/useWatchlist";
 import { jsonResponse, makeFrame, makeFrameEntry, makeWatchlistEntry } from "@/test/fixtures";
 
 function WatchlistHarness() {
+  const watchlist = useWatchlist();
   const [selected, setSelected] = useState<string | null>(null);
-  return <Watchlist selectedTicker={selected} onSelect={setSelected} />;
+  return <Watchlist watchlist={watchlist} selectedTicker={selected} onSelect={setSelected} />;
 }
 
 /** Renders the Watchlist inside a harness that holds the selectedTicker state. */
