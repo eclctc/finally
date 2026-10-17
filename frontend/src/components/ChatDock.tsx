@@ -10,8 +10,14 @@ import { ChatTranscript } from "./ChatTranscript";
 import { Panel } from "./Panel";
 
 /** The chat aside; owns the conversation state above the panel body so collapse keeps it. */
-export function ChatDock({ onActionsApplied }: { onActionsApplied: (actions: ChatAction[]) => void }) {
-  const chat = useChat(onActionsApplied);
+export function ChatDock({
+  onActionsApplied,
+  onUnconfirmed,
+}: {
+  onActionsApplied: (actions: ChatAction[]) => void;
+  onUnconfirmed: () => void;
+}) {
+  const chat = useChat(onActionsApplied, onUnconfirmed);
   const [collapsed, setCollapsed] = useState(false);
   const [toggled, setToggled] = useState(false);
   const toggle = () => {

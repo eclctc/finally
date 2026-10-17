@@ -49,6 +49,12 @@ export function Dashboard() {
     [loadWatchlist, refresh, refreshHistory],
   );
 
+  const refreshAll = useCallback(() => {
+    loadWatchlist();
+    refresh();
+    refreshHistory();
+  }, [loadWatchlist, refresh, refreshHistory]);
+
   return (
     <div className="flex h-screen min-w-[1280px] flex-col bg-surface text-text">
       <Header portfolio={portfolio} failed={failed} />
@@ -73,7 +79,7 @@ export function Dashboard() {
             </Panel>
           </div>
         </main>
-        <ChatDock onActionsApplied={applyChatActions} />
+        <ChatDock onActionsApplied={applyChatActions} onUnconfirmed={refreshAll} />
       </div>
     </div>
   );

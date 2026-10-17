@@ -9,11 +9,13 @@ import { jsonResponse, makeChatReply, makeOkTrade } from "@/test/fixtures";
 
 const TIMEOUT_ERROR = "The AI assistant timed out, please try again";
 const FOLLOW_UP = "Your message was kept. Press Send to try again.";
+const UNCONFIRMED_ERROR = "Could not confirm the request.";
+const UNCONFIRMED_FOLLOW_UP = "Data refreshed. Check your positions and watchlist before sending again.";
 
-const renderDock = (fetchStub: ReturnType<typeof vi.fn>) => {
+const renderDock = (fetchStub: ReturnType<typeof vi.fn>, onUnconfirmed = vi.fn()) => {
   vi.stubGlobal("fetch", fetchStub);
   const onActionsApplied = vi.fn();
-  render(<ChatDock onActionsApplied={onActionsApplied} />);
+  render(<ChatDock onActionsApplied={onActionsApplied} onUnconfirmed={onUnconfirmed} />);
   return onActionsApplied;
 };
 
@@ -27,7 +29,11 @@ afterEach(() => vi.unstubAllGlobals());
 describe("ChatDock failed send", () => {
   it("a 502 shows the error inline and keeps the text", async () => {
     const user = userEvent.setup();
-    const onActionsApplied = renderDock(vi.fn(() => Promise.resolve(jsonResponse({ error: TIMEOUT_ERROR }, 502))));
+    const onUnconfirmed = vi.fn();
+    const onActionsApplied = renderDock(
+      vi.fn(() => Promise.resolve(jsonResponse({ error: TIMEOUT_ERROR }, 502))),
+      onUnconfirmed,
+    );
     await user.type(input(), "Analyze AAPL");
     await user.click(sendButton());
 
@@ -42,6 +48,7 @@ describe("ChatDock failed send", () => {
     expect(bubbles("assistant")).toHaveLength(0);
     expect(screen.queryByTestId(testIds.chatLoading)).not.toBeInTheDocument();
     expect(onActionsApplied).not.toHaveBeenCalled();
+    expect(onUnconfirmed).not.toHaveBeenCalled();
   });
 
   it("a resend replaces the failed attempt", async () => {
@@ -65,15 +72,19 @@ describe("ChatDock failed send", () => {
     expect(onActionsApplied).toHaveBeenCalledWith([]);
   });
 
-  it("a network failure shows the fixed copy", async () => {
+  it("a lost response refreshes the data and warns the message may have been applied", async () => {
     const user = userEvent.setup();
-    renderDock(vi.fn(() => Promise.reject(new Error("socket hang up"))));
+    const onUnconfirmed = vi.fn();
+    renderDock(vi.fn(() => Promise.reject(new Error("socket hang up"))), onUnconfirmed);
     await user.type(input(), "hello");
     await user.click(sendButton());
 
     const error = await screen.findByTestId(testIds.chatError);
-    expect(error).toHaveTextContent("Request failed. Try again.");
-    expect(error).toHaveTextContent(FOLLOW_UP);
+    expect(error).toHaveTextContent(UNCONFIRMED_ERROR);
+    expect(error).toHaveTextContent(UNCONFIRMED_FOLLOW_UP);
+    expect(error).not.toHaveTextContent(FOLLOW_UP);
+    expect(input()).toHaveValue("hello");
+    expect(onUnconfirmed).toHaveBeenCalledTimes(1);
   });
 
   it("an error without a JSON body shows the status", async () => {

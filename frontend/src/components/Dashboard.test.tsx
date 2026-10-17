@@ -358,7 +358,7 @@ describe("Dashboard", () => {
   /** Chat reply stub: the watchlist reloads to `after`, the portfolio gains an AAPL position, history can fail on reload. */
   const stubAiReply = (
     reply: ReturnType<typeof makeChatReply>,
-    { after = ["AAPL", "MSFT"], historyFailsAfterFirst = false } = {},
+    { after = ["AAPL", "MSFT"], historyFailsAfterFirst = false, chatLost = false } = {},
   ) => {
     const watchlists = [
       { tickers: [makeWatchlistEntry("AAPL"), makeWatchlistEntry("MSFT")] },
@@ -375,7 +375,10 @@ describe("Dashboard", () => {
           ? jsonResponse({ error: "boom" }, 500)
           : jsonResponse({ snapshots: [] });
       },
-      "POST /api/chat": () => jsonResponse(reply),
+      "POST /api/chat": () => {
+        if (chatLost) throw new Error("down");
+        return jsonResponse(reply);
+      },
     });
     vi.stubGlobal("fetch", fetchMock);
     return fetchMock;
@@ -430,6 +433,18 @@ describe("Dashboard", () => {
     await screen.findByTestId(testIds.watchlistRow("PYPL"));
     await waitFor(() => expect(getCount(fetchMock, "/api/portfolio/history")).toBe(2));
     await act(async () => {});
+    expect(changedRows()).toHaveLength(0);
+  });
+
+  it("a lost chat response refreshes the watchlist, portfolio and history and marks nothing", async () => {
+    const fetchMock = stubAiReply(makeChatReply("unused"), { chatLost: true });
+    await sendChat("Please buy some Apple");
+
+    await screen.findByTestId(testIds.chatError);
+    await waitFor(() => expect(getCount(fetchMock, "/api/watchlist")).toBe(2));
+    await waitFor(() => expect(getCount(fetchMock, "/api/portfolio")).toBe(2));
+    await waitFor(() => expect(getCount(fetchMock, "/api/portfolio/history")).toBe(2));
+    await screen.findByTestId(testIds.positionRow("AAPL"));
     expect(changedRows()).toHaveLength(0);
   });
 

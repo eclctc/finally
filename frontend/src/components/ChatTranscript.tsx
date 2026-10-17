@@ -36,7 +36,11 @@ export function ChatTranscript({ chat }: { chat: ChatState }) {
         {attempt?.error != null && (
           <div role="alert" data-testid={testIds.chatError} className="max-w-[85%] border border-down/50 bg-panel px-2 py-1">
             <p className="break-words text-down">{attempt.error}</p>
-            <p className="text-muted">Your message was kept. Press Send to try again.</p>
+            <p className="text-muted">
+              {attempt.unconfirmed
+                ? "Data refreshed. Check your positions and watchlist before sending again."
+                : "Your message was kept. Press Send to try again."}
+            </p>
           </div>
         )}
       </div>
