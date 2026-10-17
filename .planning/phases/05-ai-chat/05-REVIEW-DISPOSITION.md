@@ -5,15 +5,15 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A lost chat response leaves the UI stale, and Send then replays the message (possible duplicate trades)"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A superseded watchlist load is reported as failure, which silently drops the AI highlight"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The chip `disabled` guard is unreachable, and its test greps the source file instead of testing behavior"
   - id: IN-01
     severity: info
@@ -31,18 +31,18 @@ findings:
     severity: info
     disposition: open
     title: "Retry sends the live draft, not the failed attempt"
-open: 7
+open: 4
 total: 7
-recorded: 2026-10-17T00:20:43.988Z
+recorded: 2026-10-17T00:40:50.632Z
 ---
 
 # Phase 05: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
+| WR-01 | warning | fixed | 05-REVIEW-FIX.md |
+| WR-02 | warning | fixed | 05-REVIEW-FIX.md |
+| WR-03 | warning | fixed | 05-REVIEW-FIX.md |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
