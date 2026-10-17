@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { testIds } from "@/lib/testIds";
-import { useWatchlist } from "@/lib/useWatchlist";
+import type { WatchlistState } from "@/lib/useWatchlist";
 import { Panel } from "./Panel";
 import { WatchlistRow } from "./WatchlistRow";
 
@@ -56,13 +56,14 @@ const BUTTON_CLASS =
   "h-7 bg-submit px-4 font-semibold text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 outline-primary";
 
 interface WatchlistProps {
+  watchlist: WatchlistState;
   selectedTicker: string | null;
   onSelect: (ticker: string | null) => void;
 }
 
 /** Watchlist panel: add form above selectable rows from GET /api/watchlist, prices from the live store. */
-export function Watchlist({ selectedTicker, onSelect }: WatchlistProps) {
-  const { tickers, loadFailed, error, adding, removing, add, remove, clearError } = useWatchlist();
+export function Watchlist({ watchlist, selectedTicker, onSelect }: WatchlistProps) {
+  const { tickers, loadFailed, error, adding, removing, add, remove, clearError } = watchlist;
   const [draft, setDraft] = useState("");
   const [scrollTarget, setScrollTarget] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);

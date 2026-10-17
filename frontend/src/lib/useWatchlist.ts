@@ -76,5 +76,7 @@ export function useWatchlist() {
 
   const clearError = useCallback(() => setError(null), []);
 
-  return { tickers, loadFailed: loadFailed && tickers === null, error, adding, removing, add, remove, clearError };
+  return { tickers, loadFailed: loadFailed && tickers === null, error, adding, removing, load, add, remove, clearError };
 }
+
+export type WatchlistState = ReturnType<typeof useWatchlist>;

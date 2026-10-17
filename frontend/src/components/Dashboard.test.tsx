@@ -8,6 +8,7 @@ import {
   makeChatReply,
   makeFailedTrade,
   makeOkTrade,
+  makeOkWatchlistChange,
   makePortfolio,
   makePosition,
   makeSnapshot,
@@ -298,6 +299,32 @@ describe("Dashboard", () => {
     expect(fetchMock.mock.calls.filter(([path]) => path === "/api/portfolio")).toHaveLength(2);
     expect(fetchMock.mock.calls.filter(([path]) => path === "/api/portfolio/history")).toHaveLength(2);
     expect(screen.getByTestId(testIds.chatInput)).toHaveValue("");
+  });
+
+  it("an AI add shows the new watchlist row without a reload", async () => {
+    const watchlists = [
+      { tickers: [makeWatchlistEntry("AAPL")] },
+      { tickers: [makeWatchlistEntry("AAPL"), makeWatchlistEntry("PYPL")] },
+    ];
+    const fetchMock = routeFetch({
+      "GET /api/watchlist": () => jsonResponse(watchlists.length > 1 ? watchlists.shift() : watchlists[0]),
+      "GET /api/portfolio": () => jsonResponse(makePortfolio(10000)),
+      "GET /api/portfolio/history": () => jsonResponse({ snapshots: [] }),
+      "POST /api/chat": () =>
+        jsonResponse(makeChatReply("Added PYPL to your watchlist.", [makeOkWatchlistChange("PYPL", "add")])),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const watchlistGets = () => fetchMock.mock.calls.filter(([path]) => path === "/api/watchlist");
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    expect(watchlistGets()).toHaveLength(1);
+
+    await user.type(screen.getByTestId(testIds.chatInput), "Please add PayPal");
+    await user.click(screen.getByTestId(testIds.chatSend));
+
+    expect(await screen.findByTestId(testIds.watchlistRow("PYPL"))).toBeInTheDocument();
+    expect(watchlistGets()).toHaveLength(2);
   });
 
   it.each([
