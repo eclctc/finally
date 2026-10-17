@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { ChatAction } from "@/lib/chat";
 import type { Portfolio } from "@/lib/portfolioValue";
 import { connectPriceStream } from "@/lib/priceStream";
 import { testIds } from "@/lib/testIds";
 import { usePortfolio } from "@/lib/usePortfolio";
 import { usePortfolioHistory } from "@/lib/usePortfolioHistory";
+import { ChatDock } from "./ChatDock";
 import { Header } from "./Header";
 import { Heatmap } from "./Heatmap";
 import { MainChart } from "./MainChart";
@@ -28,6 +30,14 @@ export function Dashboard() {
       refreshHistory();
     },
     [setPortfolio, refreshHistory],
+  );
+
+  const applyChatActions = useCallback(
+    async (actions: ChatAction[]) => {
+      if (!actions.some((action) => action.status === "ok")) return;
+      await Promise.all([refresh(), refreshHistory()]);
+    },
+    [refresh, refreshHistory],
   );
 
   return (
@@ -54,9 +64,7 @@ export function Dashboard() {
             </Panel>
           </div>
         </main>
-        <aside className="w-[320px] shrink-0">
-          <Panel title="AI Chat" testId={testIds.chatPanel} className="h-full" />
-        </aside>
+        <ChatDock onActionsApplied={applyChatActions} />
       </div>
     </div>
   );

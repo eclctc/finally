@@ -3,7 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/Dashboard";
 import { testIds } from "@/lib/testIds";
-import { jsonResponse, makePortfolio, makePosition, makeSnapshot, makeTradeResponse, makeWatchlistEntry } from "@/test/fixtures";
+import {
+  jsonResponse,
+  makeChatReply,
+  makeFailedTrade,
+  makeOkTrade,
+  makePortfolio,
+  makePosition,
+  makeSnapshot,
+  makeTradeResponse,
+  makeWatchlistEntry,
+} from "@/test/fixtures";
 import type { FakeEventSource } from "../../vitest.setup";
 
 const Fake = globalThis.EventSource as unknown as typeof FakeEventSource;
@@ -253,5 +263,72 @@ describe("Dashboard", () => {
       expect(fetchMock.mock.calls.filter(([path]) => path === "/api/portfolio/history")).toHaveLength(2),
     );
     expect(fetchMock.mock.calls.filter(([path]) => path === "/api/portfolio")).toHaveLength(1);
+  });
+
+  it("a chat buy shows the reply and its chip and adds the position row", async () => {
+    const portfolios = [makePortfolio(10000), makePortfolio(9809.88, [makePosition("AAPL", 1, 190.1234, 190.1234)])];
+    const fetchMock = routeFetch({
+      "GET /api/portfolio": () => jsonResponse(portfolios.length > 1 ? portfolios.shift() : portfolios[0]),
+      "GET /api/portfolio/history": () => jsonResponse({ snapshots: [] }),
+      "POST /api/chat": () =>
+        jsonResponse(makeChatReply("Done. Buying 1 share of AAPL.", [makeOkTrade("AAPL", "buy", 1, 190.1234)])),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    const { container } = render(<Dashboard />);
+    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance)).toHaveTextContent("$10,000.00"));
+
+    await user.type(screen.getByTestId(testIds.chatInput), "Please buy some Apple");
+    await user.click(screen.getByTestId(testIds.chatSend));
+
+    const assistant = await screen.findAllByText(/Done\. Buying 1 share of AAPL\./);
+    expect(assistant).toHaveLength(1);
+    const userMessages = container.querySelectorAll('[data-testid="chat-message"][data-role="user"]');
+    expect(userMessages[userMessages.length - 1]).toHaveTextContent("Please buy some Apple");
+    expect(container.querySelectorAll('[data-testid="chat-message"][data-role="assistant"]')).toHaveLength(1);
+    const chips = screen.getAllByTestId(testIds.chatAction);
+    expect(chips).toHaveLength(1);
+    expect(chips[0]).toHaveAttribute("data-status", "ok");
+    expect(chips[0]).toHaveTextContent("BUY 1 AAPL @ 190.12");
+    expect(await screen.findByTestId(testIds.positionRow("AAPL"))).toBeInTheDocument();
+
+    const post = fetchMock.mock.calls.find(([path, init]) => path === "/api/chat" && init?.method === "POST")!;
+    expect(JSON.parse(post[1]!.body as string)).toEqual({ message: "Please buy some Apple" });
+    expect(post[1]!.headers).toMatchObject({ "Content-Type": "application/json" });
+    expect(fetchMock.mock.calls.filter(([path]) => path === "/api/portfolio")).toHaveLength(2);
+    expect(fetchMock.mock.calls.filter(([path]) => path === "/api/portfolio/history")).toHaveLength(2);
+    expect(screen.getByTestId(testIds.chatInput)).toHaveValue("");
+  });
+
+  it.each([
+    ["zero actions", makeChatReply("Your portfolio is all cash.")],
+    [
+      "only failed actions",
+      makeChatReply("I could not do that.", [
+        makeFailedTrade("AAPL", "buy", 1, "Insufficient cash: need $190.12, have $0.00"),
+      ]),
+    ],
+  ])("a reply with %s refetches nothing", async (_name, reply) => {
+    const fetchMock = routeFetch({
+      "GET /api/portfolio": () => jsonResponse(makePortfolio(10000)),
+      "GET /api/portfolio/history": () => jsonResponse({ snapshots: [] }),
+      "POST /api/chat": () => jsonResponse(reply),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance)).toHaveTextContent("$10,000.00"));
+
+    await user.type(screen.getByTestId(testIds.chatInput), "How am I doing?");
+    await user.click(screen.getByTestId(testIds.chatSend));
+
+    expect(await screen.findByText(reply.message)).toBeInTheDocument();
+    await act(async () => {});
+    expect(fetchMock.mock.calls.filter(([path]) => path === "/api/portfolio")).toHaveLength(1);
+    expect(fetchMock.mock.calls.filter(([path]) => path === "/api/portfolio/history")).toHaveLength(1);
+    for (const chip of screen.queryAllByTestId(testIds.chatAction)) {
+      expect(chip).toHaveAttribute("data-status", "failed");
+    }
+    expect(screen.queryAllByTestId(testIds.chatAction)).toHaveLength(reply.actions.length);
   });
 });
