@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Watchlist } from "@/components/Watchlist";
+import { markAiChanged } from "@/lib/aiChangeStore";
 import { EMPTY_SERIES, getEntry, getSeries, mergeFrame } from "@/lib/priceStore";
 import { testIds } from "@/lib/testIds";
 import { useWatchlist } from "@/lib/useWatchlist";
@@ -599,5 +600,66 @@ describe("Watchlist selection", () => {
     await streamTick("AAPL", 190.0076, 190);
     expect(changeCell("AAPL")).toHaveTextContent(/^0\.00%$/);
     expect(changeCell("AAPL")).toHaveClass("text-muted");
+  });
+});
+
+describe("Watchlist AI highlight", () => {
+  afterEach(() => vi.useRealTimers());
+
+  const row = (ticker: string) => screen.getByTestId(testIds.watchlistRow(ticker));
+
+  /** Loads MSFT (selected by default) and AAPL on real timers, then switches to fake timers. */
+  const watchWithFakeTimers = async () => {
+    stubWatchlist(makeWatchlistEntry("MSFT"), makeWatchlistEntry("AAPL"));
+    renderWatchlist();
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    await waitFor(() => expect(row("MSFT")).toHaveAttribute("aria-current", "true"));
+    vi.useFakeTimers();
+  };
+
+  it("marks only the added ticker's watchlist row", async () => {
+    await watchWithFakeTimers();
+    act(() => markAiChanged("watchlist", "AAPL"));
+    expect(row("AAPL")).toHaveAttribute("data-ai-changed", "true");
+    expect(row("MSFT")).not.toHaveAttribute("data-ai-changed");
+  });
+
+  it("does not mark the watchlist row for a position mark", async () => {
+    await watchWithFakeTimers();
+    act(() => markAiChanged("position", "AAPL"));
+    expect(row("AAPL")).not.toHaveAttribute("data-ai-changed");
+  });
+
+  it("uses one background utility on the selected row and restores bg-surface after 2,500 ms", async () => {
+    await watchWithFakeTimers();
+    expect(row("MSFT")).toHaveClass("bg-surface");
+    act(() => markAiChanged("watchlist", "MSFT"));
+    expect(row("MSFT")).toHaveAttribute("data-ai-changed", "true");
+    expect(row("MSFT")).toHaveAttribute("aria-current", "true");
+    expect(row("MSFT")).toHaveClass("bg-primary/20");
+    expect(row("MSFT")).not.toHaveClass("bg-surface");
+    expect(row("MSFT")).not.toHaveClass("hover:bg-surface/60");
+
+    act(() => vi.advanceTimersByTime(2499));
+    expect(row("MSFT")).toHaveAttribute("data-ai-changed", "true");
+    act(() => vi.advanceTimersByTime(1));
+    expect(row("MSFT")).not.toHaveAttribute("data-ai-changed");
+    expect(row("MSFT")).toHaveClass("bg-surface");
+    expect(row("MSFT")).not.toHaveClass("bg-primary/20");
+    expect(row("MSFT")).toHaveAttribute("aria-current", "true");
+  });
+
+  it("drops the hover fill on an idle row while highlighted and brings it back after", async () => {
+    await watchWithFakeTimers();
+    expect(row("AAPL")).toHaveClass("hover:bg-surface/60");
+    act(() => markAiChanged("watchlist", "AAPL"));
+    expect(row("AAPL")).toHaveClass("bg-primary/20");
+    expect(row("AAPL")).not.toHaveClass("hover:bg-surface/60");
+    act(() => vi.advanceTimersByTime(1500));
+    expect(row("AAPL")).toHaveClass("bg-transparent");
+    expect(row("AAPL")).not.toHaveClass("hover:bg-surface/60");
+    act(() => vi.advanceTimersByTime(1000));
+    expect(row("AAPL")).toHaveClass("hover:bg-surface/60");
+    expect(row("AAPL")).not.toHaveClass("bg-transparent");
   });
 });
