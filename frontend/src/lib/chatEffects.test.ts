@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { removedTickers } from "@/lib/chatEffects";
+import { aiChangeTargets, removedTickers } from "@/lib/chatEffects";
 import {
+  makeFailedTrade,
   makeFailedWatchlistChange,
   makeOkTrade,
   makeOkWatchlistChange,
@@ -30,5 +31,27 @@ describe("removedTickers", () => {
       makeOkWatchlistChange("AAPL", "remove"),
     ];
     expect(removedTickers(actions)).toEqual(["MSFT", "AAPL"]);
+  });
+});
+
+describe("aiChangeTargets", () => {
+  it("maps ok trades and ok adds in order and skips removes and failed actions", () => {
+    const actions = [
+      makeOkWatchlistChange("PYPL", "add"),
+      makeOkWatchlistChange("MSFT", "remove"),
+      makeOkTrade("AAPL", "buy", 1, 190),
+      makeOkTrade("NVDA", "sell", 2, 900),
+      makeFailedTrade("TSLA", "buy", 1, "Insufficient cash"),
+      makeFailedWatchlistChange("ZZZZ", "add", "Unknown ticker"),
+    ];
+    expect(aiChangeTargets(actions)).toEqual([
+      { kind: "watchlist", ticker: "PYPL" },
+      { kind: "position", ticker: "AAPL" },
+      { kind: "position", ticker: "NVDA" },
+    ]);
+  });
+
+  it("returns nothing for no actions", () => {
+    expect(aiChangeTargets([])).toEqual([]);
   });
 });
