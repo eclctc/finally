@@ -341,3 +341,38 @@ describe("ChatDock scroll to newest", () => {
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "end" });
   });
 });
+
+const toggles = () => screen.queryAllByTestId(testIds.chatToggle);
+
+describe("ChatDock collapse", () => {
+  it("collapsing and expanding keeps the conversation and the draft", async () => {
+    const user = userEvent.setup();
+    const fetchStub = vi.fn(() => Promise.resolve(jsonResponse(makeChatReply("Your portfolio is all cash."))));
+    renderDock(fetchStub);
+    await user.type(input(), "Analyze my portfolio");
+    await user.click(sendButton());
+    await waitFor(() => expect(bubbles("assistant")).toHaveLength(1));
+    await user.type(input(), "next question");
+
+    expect(toggles()).toHaveLength(1);
+    expect(toggles()[0]).toHaveAttribute("aria-expanded", "true");
+    expect(toggles()[0]).toHaveAttribute("aria-label", "Collapse AI Chat");
+    expect(toggles()[0]).toHaveTextContent("›");
+    expect(screen.getByRole("complementary")).toHaveClass("w-[320px]");
+
+    await user.click(toggles()[0]);
+    expect(screen.getByRole("complementary")).toHaveClass("w-10");
+    expect(screen.getByTestId(testIds.chatPanel)).toHaveAttribute("aria-label", "AI Chat");
+    expect(toggles()).toHaveLength(1);
+    expect(toggles()[0]).toHaveAttribute("aria-expanded", "false");
+    expect(toggles()[0]).toHaveAttribute("aria-label", "Expand AI Chat");
+    expect(screen.queryAllByTestId(testIds.chatMessage)).toHaveLength(0);
+    expect(screen.queryByTestId(testIds.chatInput)).not.toBeInTheDocument();
+
+    await user.click(toggles()[0]);
+    expect(bubbles("user")).toHaveLength(1);
+    expect(bubbles("assistant")).toHaveLength(1);
+    expect(input()).toHaveValue("next question");
+    expect(fetchStub).toHaveBeenCalledTimes(1);
+  });
+});

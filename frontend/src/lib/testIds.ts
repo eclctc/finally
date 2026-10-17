@@ -27,6 +27,7 @@ export const testIds = {
   chatAction: "chat-action",
   chatError: "chat-error",
   chatChip: "chat-chip",
+  chatToggle: "chat-toggle",
   watchlistRow: (ticker: string) => `watchlist-row-${ticker}`,
   watchlistPrice: (ticker: string) => `watchlist-price-${ticker}`,
   watchlistRemove: (ticker: string) => `watchlist-remove-${ticker}`,

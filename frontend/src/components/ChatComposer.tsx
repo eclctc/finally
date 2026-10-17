@@ -10,7 +10,7 @@ const TEXTAREA_PENDING_CLASS =
   "h-14 min-w-0 flex-1 resize-none border border-line bg-surface px-2 py-1 text-text opacity-60 placeholder:text-muted focus:border-primary focus-visible:outline-2 outline-primary";
 
 /** Composer form: message textarea and Send. */
-export function ChatComposer({ chat }: { chat: ChatState }) {
+export function ChatComposer({ chat, autoFocus = false }: { chat: ChatState; autoFocus?: boolean }) {
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     chat.send(chat.draft);
@@ -29,6 +29,7 @@ export function ChatComposer({ chat }: { chat: ChatState }) {
         value={chat.draft}
         onChange={(event) => chat.setDraft(event.target.value)}
         onKeyDown={handleKeyDown}
+        autoFocus={autoFocus}
         readOnly={chat.pending}
         placeholder="Message FinAlly"
         aria-label="Message to FinAlly"
