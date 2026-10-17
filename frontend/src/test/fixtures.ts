@@ -1,3 +1,4 @@
+import type { ChatAction, ChatReply } from "@/lib/chat";
 import type { Snapshot } from "@/lib/pnlSeries";
 import type { Portfolio, PortfolioPosition } from "@/lib/portfolioValue";
 
@@ -78,3 +79,37 @@ export const makeSnapshot = (totalValue: number, recordedAt: string): Snapshot =
   total_value: totalValue,
   recorded_at: recordedAt,
 });
+
+/** POST /api/chat 200 body. */
+export const makeChatReply = (message: string, actions: ChatAction[] = []): ChatReply => ({ message, actions });
+
+/** Executed trade action. */
+export const makeOkTrade = (
+  ticker: string,
+  side: "buy" | "sell",
+  quantity: number,
+  price: number,
+): ChatAction => ({ type: "trade", ticker, side, quantity, status: "ok", price });
+
+/** Failed trade action carrying the backend reason. */
+export const makeFailedTrade = (
+  ticker: string,
+  side: "buy" | "sell",
+  quantity: number,
+  error: string,
+): ChatAction => ({ type: "trade", ticker, side, quantity, status: "failed", error });
+
+/** Executed watchlist change. */
+export const makeOkWatchlistChange = (ticker: string, action: "add" | "remove"): ChatAction => ({
+  type: "watchlist",
+  ticker,
+  action,
+  status: "ok",
+});
+
+/** Failed watchlist change carrying the backend reason. */
+export const makeFailedWatchlistChange = (
+  ticker: string,
+  action: "add" | "remove",
+  error: string,
+): ChatAction => ({ type: "watchlist", ticker, action, status: "failed", error });
