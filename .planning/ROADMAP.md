@@ -164,11 +164,11 @@ Research flag: spike the Recharts 3 Treemap custom `content` renderer first. It 
   4. After a reply with successful actions, the watchlist, positions, cash and P&L chart refresh without a reload, and the rows the AI changed are briefly highlighted.
   5. A chat error (502) shows inline in the panel and the user's typed input is kept. Quick-prompt chips offer starter questions that contain no mock-trigger keywords (buy, sell, add).
 
-**Plans**: 6 plans
+**Plans**: 1/6 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 05-01-PLAN.md — Tracer: a chat buy shows the reply, its BUY chip and the new position row (portfolio and history refresh); action-chip contract for every outcome (CHAT-01, CHAT-03, CHAT-05)
+- [x] 05-01-PLAN.md — Tracer: a chat buy shows the reply, its BUY chip and the new position row (portfolio and history refresh); action-chip contract for every outcome (CHAT-01, CHAT-03, CHAT-05)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 05-02-PLAN.md — Send lifecycle: inline 502 with the text kept and attempt replaced, Thinking... with a locked composer and one request per action, Enter / Shift+Enter, empty state and quick-prompt chips, scroll to newest (CHAT-01, CHAT-02, CHAT-04, CHAT-06)
@@ -210,5 +210,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 2 has no
 | 2. Backend Hardening | 6/6 | Complete    | 2026-10-16 |
 | 3. Live Watchlist & Header | 5/5 | Complete    | 2026-10-16 |
 | 4. Trading & Portfolio | 7/7 | Complete    | 2026-10-16 |
-| 5. AI Chat | 0/TBD | Not started | - |
+| 5. AI Chat | 1/6 | In Progress | - |
 | 6. Ship & E2E Gate | 0/TBD | Not started | - |
