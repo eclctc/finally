@@ -19,6 +19,11 @@ export function ChatTranscript({ chat }: { chat: ChatState }) {
           <ChatBubble key={index} {...message} />
         ))}
         {attempt && <ChatBubble key="attempt" role="user" content={attempt.text} actions={[]} />}
+        {chat.pending && (
+          <p role="status" data-testid={testIds.chatLoading} className="text-muted">
+            Thinking...
+          </p>
+        )}
         {attempt?.error != null && (
           <div role="alert" data-testid={testIds.chatError} className="max-w-[85%] border border-down/50 bg-panel px-2 py-1">
             <p className="break-words text-down">{attempt.error}</p>
