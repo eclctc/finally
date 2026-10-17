@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { errorMessage, request } from "./api";
 import type { ChatAction, ChatReply } from "./chat";
 
@@ -22,11 +22,13 @@ export function useChat(onActionsApplied: (actions: ChatAction[]) => void) {
   const [attempt, setAttempt] = useState<ChatAttempt | null>(null);
   const [draft, setDraft] = useState("");
   const pending = attempt !== null && attempt.error === null;
+  const inFlight = useRef(false);
 
   const send = useCallback(
     async (raw: string) => {
       const text = raw.trim();
-      if (text === "") return;
+      if (text === "" || inFlight.current) return;
+      inFlight.current = true;
       setAttempt({ text, error: null });
       let reply: ChatReply;
       try {
@@ -38,6 +40,8 @@ export function useChat(onActionsApplied: (actions: ChatAction[]) => void) {
       } catch (err) {
         setAttempt({ text, error: errorMessage(err) });
         return;
+      } finally {
+        inFlight.current = false;
       }
       setMessages((prev) => [
         ...prev,

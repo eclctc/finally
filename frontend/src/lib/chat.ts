@@ -22,3 +22,9 @@ export function describeAction(action: ChatAction): string {
   if (action.status === "ok") return `${action.action === "add" ? "Added" : "Removed"} ${action.ticker}`;
   return `${action.action === "add" ? "Add" : "Remove"} ${action.ticker} failed - ${action.error}`;
 }
+
+/**
+ * Starter questions shown in the empty chat. No entry may contain buy, sell or add as a
+ * case-insensitive substring, because backend/app/chat/mock.py keys its trades on them.
+ */
+export const QUICK_PROMPTS = ["Analyze my portfolio", "What is my biggest risk?", "Summarize my P&L"] as const;
