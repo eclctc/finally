@@ -86,7 +86,7 @@ None yet.
 - [Phase 1]: Open code-review warning WR-03 (vacuous testid parity test). WR-01, WR-02 and `color-scheme: dark` were fixed in Phase 3.
 - [Phase 3]: Open code-review advisories WR-01..WR-04, IN-01..IN-04 in 03-REVIEW-DISPOSITION.md (non-blocking): failed reload replaces the list, single `removing` slot / unordered loads, `clearTicker` drops a held ticker's live price, change color from unrounded value.
 - [Phase 4]: Review warnings WR-01..WR-05 fixed (04-REVIEW-FIX.md); IN-01..IN-08 open (non-blocking).
-- [Phase 5]: Open code-review advisories WR-01..WR-03, IN-01..IN-04 in 05-REVIEW-DISPOSITION.md (non-blocking). WR-01: a lost chat response refreshes nothing and invites a resend that can re-run executed trades. WR-02: superseded watchlist load returns `false`, so overlapping loads skip the highlight. WR-03: unreachable chip `disabled` and a source-grep test.
+- [Phase 5]: Review warnings WR-01..WR-03 fixed (05-REVIEW-FIX.md); IN-01..IN-04 open (non-blocking). `useChat`/`ChatDock` take a required `onUnconfirmed` (Dashboard `refreshAll`); a superseded watchlist `load()` now resolves `true`.
 
 ## Deferred Items
 

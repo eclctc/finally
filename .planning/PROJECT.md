@@ -54,7 +54,6 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 
 **Frontend (built fresh, PLAN.md §10):**
 - [ ] Frontend unit tests with Vitest + React Testing Library (374 tests after Phase 5; coverage grows per phase)
-- [ ] Chat robustness: a lost chat response shows a retry prompt without refreshing, so a resend can re-run executed trades (Phase 5 review WR-01, open)
 
 **Integration:**
 - [ ] `docker build` succeeds and `scripts/start_mac.sh` launches a working app at `http://localhost:8000`
@@ -104,7 +103,7 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 | 1280px minimum width instead of 1024px | Chart/Heatmap cells were ~68px at 1024 | ✓ Good — Phase 3 UAT layout check |
 | Header shows the client-computed live total, not the API `total_value` | The total moves with every tick | ✓ Good — Phase 3; review WR-01..WR-04 open (watchlist refresh/race robustness, change color rounding) |
 | One `usePortfolio()` and one `usePortfolioHistory()` in `Dashboard`, passed as props; trades apply the POST response directly | No context needed for direct children; no extra GET after a trade; Phase 5 chat reuses `refresh()`/`refreshHistory()` | ✓ Good — Phase 4 (UAT 3/3, E2E 9/9) |
-| `useWatchlist` lifted into `Dashboard`; `load()` returns `Promise<boolean>` and a superseded load returns `false` | One chat reply can reload all three sources and gate the highlight on success | ✓ Good — Phase 5; review WR-02 notes the highlight is skipped when loads overlap |
+| `useWatchlist` lifted into `Dashboard`; `load()` returns `Promise<boolean>` and a superseded load resolves `true` (05 review WR-02) | One chat reply can reload all three sources and gate the highlight on success | ✓ Good — Phase 5 |
 | Module-level `aiChangeStore` (hold/fade timers) read per row, marked only when every refresh succeeds | Highlight never claims a change the UI has not shown | ✓ Good — Phase 5 (UAT 5/5) |
 | Chat collapse lives inside `ChatDock`'s own `aside` (`w-[320px]` / `w-10`); `useChat` sits above both views | Collapse keeps the conversation and in-flight request; `Dashboard` layout untouched | ✓ Good — Phase 5 |
 | Treemap tiles via a custom `content` renderer returning `<rect>` + `<text>`, no `clipPath` | E2E reads the first `svg rect` of the heatmap; spike confirmed in jsdom and Chromium | ✓ Good — Phase 4 |
