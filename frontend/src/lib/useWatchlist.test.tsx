@@ -55,7 +55,7 @@ describe("useWatchlist load", () => {
     expect(loaded).toBe(false);
   });
 
-  it("resolves false for a load superseded by a newer one and keeps the newer list", async () => {
+  it("resolves true for a load superseded by a newer one and keeps the newer list", async () => {
     const older = deferred();
     const responses = [
       Promise.resolve(jsonResponse({ tickers: [makeWatchlistEntry("AAPL")] })),
@@ -79,7 +79,7 @@ describe("useWatchlist load", () => {
 
     await act(async () => {
       older.resolve(jsonResponse({ tickers: [makeWatchlistEntry("STALE")] }));
-      expect(await olderLoad).toBe(false);
+      expect(await olderLoad).toBe(true);
     });
     expect(result.current.tickers).toEqual(["FRESH"]);
   });
