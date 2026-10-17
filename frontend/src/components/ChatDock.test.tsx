@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChatDock } from "@/components/ChatDock";
 import { testIds } from "@/lib/testIds";
-import { jsonResponse, makeChatReply } from "@/test/fixtures";
+import { jsonResponse, makeChatReply, makeOkTrade } from "@/test/fixtures";
 
 const TIMEOUT_ERROR = "The AI assistant timed out, please try again";
 const FOLLOW_UP = "Your message was kept. Press Send to try again.";
@@ -339,5 +339,98 @@ describe("ChatDock scroll to newest", () => {
     scrollIntoView.mockClear();
     await act(async () => deferred.resolve(jsonResponse(makeChatReply("Hi."))));
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "end" });
+  });
+});
+
+const toggles = () => screen.queryAllByTestId(testIds.chatToggle);
+
+describe("ChatDock collapse", () => {
+  it("collapsing and expanding keeps the conversation and the draft", async () => {
+    const user = userEvent.setup();
+    const fetchStub = vi.fn(() => Promise.resolve(jsonResponse(makeChatReply("Your portfolio is all cash."))));
+    renderDock(fetchStub);
+    await user.type(input(), "Analyze my portfolio");
+    await user.click(sendButton());
+    await waitFor(() => expect(bubbles("assistant")).toHaveLength(1));
+    await user.type(input(), "next question");
+
+    expect(toggles()).toHaveLength(1);
+    expect(toggles()[0]).toHaveAttribute("aria-expanded", "true");
+    expect(toggles()[0]).toHaveAttribute("aria-label", "Collapse AI Chat");
+    expect(toggles()[0]).toHaveTextContent("›");
+    expect(screen.getByRole("complementary")).toHaveClass("w-[320px]");
+
+    await user.click(toggles()[0]);
+    expect(screen.getByRole("complementary")).toHaveClass("w-10");
+    expect(screen.getByTestId(testIds.chatPanel)).toHaveAttribute("aria-label", "AI Chat");
+    expect(toggles()).toHaveLength(1);
+    expect(toggles()[0]).toHaveAttribute("aria-expanded", "false");
+    expect(toggles()[0]).toHaveAttribute("aria-label", "Expand AI Chat");
+    expect(screen.queryAllByTestId(testIds.chatMessage)).toHaveLength(0);
+    expect(screen.queryByTestId(testIds.chatInput)).not.toBeInTheDocument();
+
+    await user.click(toggles()[0]);
+    expect(bubbles("user")).toHaveLength(1);
+    expect(bubbles("assistant")).toHaveLength(1);
+    expect(input()).toHaveValue("next question");
+    expect(fetchStub).toHaveBeenCalledTimes(1);
+  });
+
+  it("moves focus to the rail on collapse and to the composer on expand, never on load", async () => {
+    const user = userEvent.setup();
+    const fetchStub = vi.fn();
+    renderDock(fetchStub);
+    expect(document.activeElement).toBe(document.body);
+
+    await user.click(toggles()[0]);
+    expect(toggles()[0]).toHaveFocus();
+
+    await user.click(toggles()[0]);
+    expect(input()).toHaveFocus();
+    expect(fetchStub).not.toHaveBeenCalled();
+  });
+
+  it("keeps a pending request across a collapse and delivers a reply that arrives while collapsed", async () => {
+    const user = userEvent.setup();
+    const deferred = deferredFetch();
+    const onActionsApplied = renderDock(deferred.stub);
+    await user.type(input(), "buy AAPL");
+    await user.click(sendButton());
+    await screen.findByTestId(testIds.chatLoading);
+
+    await user.click(toggles()[0]);
+    await user.click(toggles()[0]);
+    expect(screen.getByTestId(testIds.chatLoading)).toHaveTextContent("Thinking...");
+
+    await user.click(toggles()[0]);
+    const actions = [makeOkTrade("AAPL", "buy", 1, 190)];
+    await act(async () => deferred.resolve(jsonResponse(makeChatReply("Bought 1 AAPL.", actions))));
+    expect(onActionsApplied).toHaveBeenCalledTimes(1);
+    expect(onActionsApplied).toHaveBeenCalledWith(actions);
+
+    await user.click(toggles()[0]);
+    expect(bubbles("user")).toHaveLength(1);
+    expect(bubbles("assistant")).toHaveLength(1);
+    expect(screen.queryByTestId(testIds.chatLoading)).not.toBeInTheDocument();
+    expect(onActionsApplied).toHaveBeenCalledTimes(1);
+    expect(deferred.stub).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps an error and the draft across a collapse", async () => {
+    const user = userEvent.setup();
+    const fetchStub = vi.fn(() => Promise.resolve(jsonResponse({ error: TIMEOUT_ERROR }, 502)));
+    renderDock(fetchStub);
+    await user.type(input(), "Analyze AAPL");
+    await user.click(sendButton());
+    await screen.findByTestId(testIds.chatError);
+
+    await user.click(toggles()[0]);
+    await user.click(toggles()[0]);
+
+    const error = screen.getByTestId(testIds.chatError);
+    expect(error).toHaveTextContent(TIMEOUT_ERROR);
+    expect(error).toHaveTextContent(FOLLOW_UP);
+    expect(input()).toHaveValue("Analyze AAPL");
+    expect(fetchStub).toHaveBeenCalledTimes(1);
   });
 });
