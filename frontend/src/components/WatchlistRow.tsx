@@ -4,17 +4,15 @@ import { memo } from "react";
 import { formatPercent, signClass } from "@/lib/format";
 import type { PriceEntry } from "@/lib/priceStore";
 import { testIds } from "@/lib/testIds";
+import { aiHighlightClass, useAiChange } from "@/lib/useAiChange";
 import { useTickerHistory, useTickerPrice } from "@/lib/usePrice";
 import { FlashingPrice } from "./FlashingPrice";
 import { Sparkline } from "./Sparkline";
 
 const dailyChange = (entry: PriceEntry) => (entry.price - entry.openPrice) / entry.openPrice;
 
-const ROW_CLASS = {
-  selected:
-    "flex h-7 cursor-pointer items-center gap-1 px-2 focus-visible:outline-2 outline-primary -outline-offset-2 bg-surface",
-  idle: "flex h-7 cursor-pointer items-center gap-1 px-2 focus-visible:outline-2 outline-primary -outline-offset-2 hover:bg-surface/60",
-};
+const ROW_BASE = "flex h-7 cursor-pointer items-center gap-1 px-2 focus-visible:outline-2 outline-primary -outline-offset-2";
+const ROW_FILL = { selected: "bg-surface", idle: "hover:bg-surface/60" };
 
 interface WatchlistRowProps {
   ticker: string;
@@ -28,6 +26,12 @@ interface WatchlistRowProps {
 export const WatchlistRow = memo(function WatchlistRow({ ticker, selected, removing, onSelect, onRemove }: WatchlistRowProps) {
   const entry = useTickerPrice(ticker);
   const history = useTickerHistory(ticker);
+  const aiPhase = useAiChange("watchlist", ticker);
+  const fill = aiPhase
+    ? aiHighlightClass(aiPhase, selected ? "surface" : "transparent")
+    : selected
+      ? ROW_FILL.selected
+      : ROW_FILL.idle;
   const change = entry && dailyChange(entry);
   const changeText = change === undefined ? "--" : formatPercent(change);
   return (
@@ -35,6 +39,7 @@ export const WatchlistRow = memo(function WatchlistRow({ ticker, selected, remov
       data-testid={testIds.watchlistRow(ticker)}
       tabIndex={0}
       aria-current={selected ? "true" : undefined}
+      data-ai-changed={aiPhase ? "true" : undefined}
       onClick={() => onSelect(ticker)}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget) return;
@@ -42,7 +47,7 @@ export const WatchlistRow = memo(function WatchlistRow({ ticker, selected, remov
         event.preventDefault();
         onSelect(ticker);
       }}
-      className={selected ? ROW_CLASS.selected : ROW_CLASS.idle}
+      className={`${ROW_BASE} ${fill}`}
     >
       <span
         className={

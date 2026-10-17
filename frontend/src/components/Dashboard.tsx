@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { markAiChanged } from "@/lib/aiChangeStore";
 import type { ChatAction } from "@/lib/chat";
-import { removedTickers } from "@/lib/chatEffects";
+import { aiChangeTargets, removedTickers } from "@/lib/chatEffects";
 import type { Portfolio } from "@/lib/portfolioValue";
 import { clearTicker } from "@/lib/priceStore";
 import { connectPriceStream } from "@/lib/priceStream";
@@ -41,7 +42,9 @@ export function Dashboard() {
     async (actions: ChatAction[]) => {
       if (!actions.some((action) => action.status === "ok")) return;
       removedTickers(actions).forEach(clearTicker);
-      await Promise.all([loadWatchlist(), refresh(), refreshHistory()]);
+      const refreshed = await Promise.all([loadWatchlist(), refresh(), refreshHistory()]);
+      if (!refreshed.every(Boolean)) return;
+      aiChangeTargets(actions).forEach(({ kind, ticker }) => markAiChanged(kind, ticker));
     },
     [loadWatchlist, refresh, refreshHistory],
   );

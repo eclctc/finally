@@ -1,6 +1,7 @@
 import { act, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PositionsTable } from "@/components/PositionsTable";
+import { markAiChanged } from "@/lib/aiChangeStore";
 import { mergeFrame, resetPriceStore } from "@/lib/priceStore";
 import { testIds } from "@/lib/testIds";
 import { makeFrame, makeFrameEntry, makePortfolio, makePosition } from "@/test/fixtures";
@@ -147,5 +148,36 @@ describe("PositionRow values", () => {
     const { container } = renderTable([makePosition("<b>X</b>", 1, 100, 100)]);
     expect(container.querySelector("b")).toBeNull();
     expect(screen.getByText("<b>X</b>")).toBeInTheDocument();
+  });
+});
+
+describe("PositionsTable AI highlight", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const renderTwo = () => renderTable([makePosition("AAPL", 1, 190, 190), makePosition("MSFT", 2, 400, 410)]);
+  const row = (ticker: string) => screen.getByTestId(testIds.positionRow(ticker));
+
+  it("marks only the changed position row", () => {
+    renderTwo();
+    act(() => markAiChanged("position", "AAPL"));
+    expect(row("AAPL")).toHaveAttribute("data-ai-changed", "true");
+    expect(row("MSFT")).not.toHaveAttribute("data-ai-changed");
+  });
+
+  it("ignores a watchlist mark", () => {
+    renderTwo();
+    act(() => markAiChanged("watchlist", "MSFT"));
+    expect(row("MSFT")).not.toHaveAttribute("data-ai-changed");
+    expect(row("AAPL")).not.toHaveAttribute("data-ai-changed");
+  });
+
+  it("keeps the attribute through 2,499 ms and drops it at 2,500 ms", () => {
+    renderTwo();
+    act(() => markAiChanged("position", "AAPL"));
+    act(() => vi.advanceTimersByTime(2499));
+    expect(row("AAPL")).toHaveAttribute("data-ai-changed", "true");
+    act(() => vi.advanceTimersByTime(1));
+    expect(row("AAPL")).not.toHaveAttribute("data-ai-changed");
   });
 });

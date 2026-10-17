@@ -305,6 +305,30 @@ describe("Dashboard", () => {
     expect(screen.getByTestId(testIds.chatInput)).toHaveValue("");
   });
 
+  it("an AI buy highlights the new position row", async () => {
+    const portfolios = [makePortfolio(10000), makePortfolio(9809.88, [makePosition("AAPL", 1, 190.1234, 190.1234)])];
+    vi.stubGlobal(
+      "fetch",
+      routeFetch({
+        "GET /api/watchlist": () => jsonResponse({ tickers: [makeWatchlistEntry("AAPL")] }),
+        "GET /api/portfolio": () => jsonResponse(portfolios.length > 1 ? portfolios.shift() : portfolios[0]),
+        "GET /api/portfolio/history": () => jsonResponse({ snapshots: [] }),
+        "POST /api/chat": () =>
+          jsonResponse(makeChatReply("Done. Buying 1 share of AAPL.", [makeOkTrade("AAPL", "buy", 1, 190.1234)])),
+      }),
+    );
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance)).toHaveTextContent("$10,000.00"));
+
+    await user.type(screen.getByTestId(testIds.chatInput), "Please buy some Apple");
+    await user.click(screen.getByTestId(testIds.chatSend));
+
+    await waitFor(() =>
+      expect(screen.getByTestId(testIds.positionRow("AAPL"))).toHaveAttribute("data-ai-changed", "true"),
+    );
+  });
+
   it("an AI add shows the new watchlist row without a reload", async () => {
     const watchlists = [
       { tickers: [makeWatchlistEntry("AAPL")] },
@@ -329,6 +353,97 @@ describe("Dashboard", () => {
 
     expect(await screen.findByTestId(testIds.watchlistRow("PYPL"))).toBeInTheDocument();
     expect(watchlistGets()).toHaveLength(2);
+  });
+
+  /** Chat reply stub: the watchlist reloads to `after`, the portfolio gains an AAPL position, history can fail on reload. */
+  const stubAiReply = (
+    reply: ReturnType<typeof makeChatReply>,
+    { after = ["AAPL", "MSFT"], historyFailsAfterFirst = false } = {},
+  ) => {
+    const watchlists = [
+      { tickers: [makeWatchlistEntry("AAPL"), makeWatchlistEntry("MSFT")] },
+      { tickers: after.map((ticker) => makeWatchlistEntry(ticker)) },
+    ];
+    const portfolios = [makePortfolio(10000), makePortfolio(9810, [makePosition("AAPL", 1, 190, 190)])];
+    let historyCalls = 0;
+    const fetchMock = routeFetch({
+      "GET /api/watchlist": () => jsonResponse(watchlists.length > 1 ? watchlists.shift() : watchlists[0]),
+      "GET /api/portfolio": () => jsonResponse(portfolios.length > 1 ? portfolios.shift() : portfolios[0]),
+      "GET /api/portfolio/history": () => {
+        historyCalls += 1;
+        return historyFailsAfterFirst && historyCalls > 1
+          ? jsonResponse({ error: "boom" }, 500)
+          : jsonResponse({ snapshots: [] });
+      },
+      "POST /api/chat": () => jsonResponse(reply),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  };
+
+  const sendChat = async (text: string) => {
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await screen.findByTestId(testIds.watchlistRow("AAPL"));
+    await waitFor(() => expect(screen.getByTestId(testIds.cashBalance)).toHaveTextContent("$10,000.00"));
+    await user.type(screen.getByTestId(testIds.chatInput), text);
+    await user.click(screen.getByTestId(testIds.chatSend));
+  };
+
+  const getCount = (fetchMock: ReturnType<typeof stubAiReply>, path: string) =>
+    fetchMock.mock.calls.filter(([called]) => called === path).length;
+  const changedRows = () => document.body.querySelectorAll("[data-ai-changed]");
+
+  it("an AI add plus buy highlights the new watchlist row and the position row, not the traded ticker's watchlist row", async () => {
+    stubAiReply(
+      makeChatReply("Added PYPL and bought AAPL.", [
+        makeOkWatchlistChange("PYPL", "add"),
+        makeOkTrade("AAPL", "buy", 1, 190),
+      ]),
+      { after: ["AAPL", "PYPL"] },
+    );
+    await sendChat("Add PayPal and buy Apple");
+
+    await waitFor(() =>
+      expect(screen.getByTestId(testIds.watchlistRow("PYPL"))).toHaveAttribute("data-ai-changed", "true"),
+    );
+    expect(screen.getByTestId(testIds.positionRow("AAPL"))).toHaveAttribute("data-ai-changed", "true");
+    expect(screen.getByTestId(testIds.watchlistRow("AAPL"))).not.toHaveAttribute("data-ai-changed");
+  });
+
+  it("an ok add of an already watched ticker highlights the existing row", async () => {
+    stubAiReply(makeChatReply("AAPL is already on your list.", [makeOkWatchlistChange("AAPL", "add")]));
+    await sendChat("Add Apple");
+
+    await waitFor(() =>
+      expect(screen.getByTestId(testIds.watchlistRow("AAPL"))).toHaveAttribute("data-ai-changed", "true"),
+    );
+  });
+
+  it("marks nothing when the history refresh fails", async () => {
+    const fetchMock = stubAiReply(makeChatReply("Added PYPL.", [makeOkWatchlistChange("PYPL", "add")]), {
+      after: ["AAPL", "PYPL"],
+      historyFailsAfterFirst: true,
+    });
+    await sendChat("Add PayPal");
+
+    await screen.findByTestId(testIds.watchlistRow("PYPL"));
+    await waitFor(() => expect(getCount(fetchMock, "/api/portfolio/history")).toBe(2));
+    await act(async () => {});
+    expect(changedRows()).toHaveLength(0);
+  });
+
+  it.each([
+    ["a failed add", makeChatReply("Could not add it.", [makeFailedWatchlistChange("ZZZZ", "add", "Unknown ticker")]), 1],
+    ["an ok remove", makeChatReply("Removed MSFT.", [makeOkWatchlistChange("MSFT", "remove")]), 2],
+  ])("%s highlights no row", async (_name, reply, historyCalls) => {
+    const fetchMock = stubAiReply(reply);
+    await sendChat("Change my list");
+
+    await screen.findByText(reply.message);
+    await waitFor(() => expect(getCount(fetchMock, "/api/portfolio/history")).toBe(historyCalls));
+    await act(async () => {});
+    expect(changedRows()).toHaveLength(0);
   });
 
   it("an AI remove clears the price store, drops the row and moves the chart to the first remaining ticker", async () => {

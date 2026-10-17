@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
+import { resetAiChanges } from "./src/lib/aiChangeStore";
 import { resetPriceStore } from "./src/lib/priceStore";
 
 class FixedSizeResizeObserver {
@@ -50,4 +51,5 @@ afterEach(() => {
   cleanup();
   FakeEventSource.instances = [];
   resetPriceStore();
+  resetAiChanges();
 });
