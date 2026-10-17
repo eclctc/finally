@@ -26,7 +26,7 @@
     {
       "number": "5",
       "name": "AI Chat",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "6",
@@ -36,8 +36,8 @@
   ],
   "next": {
     "command": "/gsd-progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 5 of 6 · 67% · executing"
+    "label": "Advance to the next step (plan phase 6)",
+    "reason": "Phase 6 of 6 — needs a plan"
   },
-  "updated_at": "2026-10-17T00:01:57.084Z"
+  "updated_at": "2026-10-17T00:27:20.008Z"
 }

@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Backend Hardening** - Chat and watchlist APIs fail cleanly with 502s, idempotent adds, per-action failures and action caps (completed 2026-10-16)
 - [x] **Phase 3: Live Watchlist & Header** - One SSE price store drives the watchlist rows, flashes, sparklines, connection dot and live header totals (completed 2026-10-16)
 - [x] **Phase 4: Trading & Portfolio** - Ticker selection, main chart, trade bar, positions table, heatmap and P&L chart (completed 2026-10-16)
-- [ ] **Phase 5: AI Chat** - Docked chat panel with inline action results, error handling and a refresh after AI actions
+- [x] **Phase 5: AI Chat** - Docked chat panel with inline action results, error handling and a refresh after AI actions (completed 2026-10-16)
 - [ ] **Phase 6: Ship & E2E Gate** - The start script launches a working app and the full Playwright suite passes with LLM_MOCK=true
 
 ## Phase Details
@@ -164,7 +164,7 @@ Research flag: spike the Recharts 3 Treemap custom `content` renderer first. It 
   4. After a reply with successful actions, the watchlist, positions, cash and P&L chart refresh without a reload, and the rows the AI changed are briefly highlighted.
   5. A chat error (502) shows inline in the panel and the user's typed input is kept. Quick-prompt chips offer starter questions that contain no mock-trigger keywords (buy, sell, add).
 
-**Plans**: 6/6 plans executed
+**Plans**: 6/6 plans complete
 
 Plans:
 **Wave 1**
@@ -210,5 +210,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 2 has no
 | 2. Backend Hardening | 6/6 | Complete    | 2026-10-16 |
 | 3. Live Watchlist & Header | 5/5 | Complete    | 2026-10-16 |
 | 4. Trading & Portfolio | 7/7 | Complete    | 2026-10-16 |
-| 5. AI Chat | 6/6 | In Progress | - |
+| 5. AI Chat | 6/6 | Complete    | 2026-10-16 |
 | 6. Ship & E2E Gate | 0/TBD | Not started | - |

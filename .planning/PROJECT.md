@@ -45,13 +45,16 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 - ✓ Portfolio heatmap (Recharts Treemap, custom `<rect>` tiles) sized by live value, colored by P&L, empty state — Phase 4
 - ✓ P&L line chart from `/api/portfolio/history`: 300-point downsample, `Start $10,000` baseline, live tail, 30 s history poll — Phase 4
 - ✓ Recharts for all charts — Phase 4
+- ✓ AI chat panel open on load, collapsible to a 40px rail without losing the conversation, draft or a pending request; session-only transcript — Phase 5
+- ✓ Chat send lifecycle: `Thinking...` line, locked composer, one request per action, Enter sends / Shift+Enter newline, quick-prompt chips (no trade verbs), inline 502 error with the text kept — Phase 5
+- ✓ Inline action chips for every executed or failed trade and watchlist change, text-only rendering — Phase 5
+- ✓ After a chat reply with ok actions, watchlist, portfolio and history refresh with no reload; changed rows get a blue highlight (1.5 s hold, 1 s fade) only when all three refreshes succeed — Phase 5
 
 ### Active
 
 **Frontend (built fresh, PLAN.md §10):**
-- [ ] AI chat panel: docked/collapsible, history, loading indicator, inline trade/watchlist confirmations and failures, inline 502 errors
-- [ ] Frontend unit tests with Vitest + React Testing Library (278 tests after Phase 4; coverage grows per phase)
-- [ ] Test robustness: two timing-sensitive tests flake under heavy parallel CPU load (Phase 4 review WR-01/WR-02)
+- [ ] Frontend unit tests with Vitest + React Testing Library (374 tests after Phase 5; coverage grows per phase)
+- [ ] Chat robustness: a lost chat response shows a retry prompt without refreshing, so a resend can re-run executed trades (Phase 5 review WR-01, open)
 
 **Integration:**
 - [ ] `docker build` succeeds and `scripts/start_mac.sh` launches a working app at `http://localhost:8000`
@@ -101,6 +104,9 @@ A user runs one Docker command, opens `http://localhost:8000`, and sees prices s
 | 1280px minimum width instead of 1024px | Chart/Heatmap cells were ~68px at 1024 | ✓ Good — Phase 3 UAT layout check |
 | Header shows the client-computed live total, not the API `total_value` | The total moves with every tick | ✓ Good — Phase 3; review WR-01..WR-04 open (watchlist refresh/race robustness, change color rounding) |
 | One `usePortfolio()` and one `usePortfolioHistory()` in `Dashboard`, passed as props; trades apply the POST response directly | No context needed for direct children; no extra GET after a trade; Phase 5 chat reuses `refresh()`/`refreshHistory()` | ✓ Good — Phase 4 (UAT 3/3, E2E 9/9) |
+| `useWatchlist` lifted into `Dashboard`; `load()` returns `Promise<boolean>` and a superseded load returns `false` | One chat reply can reload all three sources and gate the highlight on success | ✓ Good — Phase 5; review WR-02 notes the highlight is skipped when loads overlap |
+| Module-level `aiChangeStore` (hold/fade timers) read per row, marked only when every refresh succeeds | Highlight never claims a change the UI has not shown | ✓ Good — Phase 5 (UAT 5/5) |
+| Chat collapse lives inside `ChatDock`'s own `aside` (`w-[320px]` / `w-10`); `useChat` sits above both views | Collapse keeps the conversation and in-flight request; `Dashboard` layout untouched | ✓ Good — Phase 5 |
 | Treemap tiles via a custom `content` renderer returning `<rect>` + `<text>`, no `clipPath` | E2E reads the first `svg rect` of the heatmap; spike confirmed in jsdom and Chromium | ✓ Good — Phase 4 |
 | Up/down color from the displayed (rounded) value via `signClass` | `+0.004%` displays `0.00%` and must be muted (closes Phase 3 WR-04) | ✓ Good — Phase 4 |
 
@@ -122,4 +128,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-16 after Phase 4*
+*Last updated: 2026-10-16 after Phase 5*

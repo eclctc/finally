@@ -1,19 +1,19 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 05
-current_phase_name: AI Chat
-status: executing
-stopped_at: Phase 4 complete, ready to execute Phase 05
-last_updated: "2026-10-17T00:01:57.077Z"
+current_phase: 6
+current_phase_name: Ship & E2E Gate
+status: planning
+stopped_at: Phase 5 complete, ready to plan Phase 6
+last_updated: "2026-10-17T00:27:20.002Z"
 last_activity: 2026-10-16
-last_activity_desc: Phase 05 execution started
-state_head: 5dff3ebe8377139c03a3be898e0eced0894af7ad
+last_activity_desc: Phase 5 complete, transitioned to Phase 6
+state_head: 299a558eba018ad2834bb479031e00b37c956d1e
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 28
-  completed_plans: 22
-  percent: 67
+  completed_plans: 28
+  percent: 83
 ---
 
 # Project State
@@ -23,21 +23,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** A user runs one Docker command, opens `http://localhost:8000`, and sees prices streaming, can trade, and can talk to an AI that trades for them, all in one dense, dark, live-updating terminal UI.
-**Current focus:** Phase 05 — AI Chat
+**Current focus:** Phase 6 — Ship & E2E Gate
 
 ## Current Position
 
-Phase: 05 (AI Chat) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 05
-Last activity: 2026-10-16 — Phase 05 execution started
+Phase: 6 — Ship & E2E Gate
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-16 — Phase 5 complete, transitioned to Phase 6
 
-Progress: [███████░░░] 67% (22/28 plans)
+Progress: [████████░░] 83% (5/6 phases; 28/28 planned plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22
+- Total plans completed: 28
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -49,6 +49,8 @@ Progress: [███████░░░] 67% (22/28 plans)
 | 02 | 6 | - | - |
 | 3 | 5 | - | - |
 | 4 | 7 | - | - |
+| 5 | 6 | - | - |
+| 5 | 6 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -71,6 +73,7 @@ Recent decisions affecting current work:
 - [Phase 1]: Frontend tooling settled: Next 16 static export (dev-only `/api` rewrite), Tailwind 4 `@theme static`, system fonts, exact npm pins + `npm ci`.
 - [Phase 3]: One `EventSource` feeds a module-level price store read via `useSyncExternalStore`; dot is red only when CLOSED, and a CLOSED stream is recreated after 1 s (confirmed by Chromium spike and `sse-reconnect.spec.ts`). 1280px minimum width. 138 frontend tests.
 - [Phase 4]: One `usePortfolio()` and one `usePortfolioHistory()` in `Dashboard` (30 s polls, stale-response guards, `refresh()`/`refreshHistory()` return `Promise<boolean>`); trades apply the POST response directly. Treemap tiles are a custom `<rect>` renderer. 278 frontend tests; UAT 3/3; E2E 9/9.
+- [Phase 5]: `useWatchlist` lifted into `Dashboard` (`load()` returns `Promise<boolean>`); chat refreshes all three sources and highlights changed rows via `aiChangeStore` only when every refresh succeeds; collapse inside `ChatDock`. 374 frontend tests; UAT 5/5; E2E 10/10; security 16/16.
 
 ### Pending Todos
 
@@ -82,8 +85,8 @@ None yet.
 
 - [Phase 1]: Open code-review warning WR-03 (vacuous testid parity test). WR-01, WR-02 and `color-scheme: dark` were fixed in Phase 3.
 - [Phase 3]: Open code-review advisories WR-01..WR-04, IN-01..IN-04 in 03-REVIEW-DISPOSITION.md (non-blocking): failed reload replaces the list, single `removing` slot / unordered loads, `clearTicker` drops a held ticker's live price, change color from unrounded value.
-- [Phase 4]: Review warnings WR-01..WR-05 fixed (04-REVIEW-FIX.md); IN-01..IN-08 open (non-blocking). `TradeBar` now has a required `onUnconfirmed` prop (Dashboard passes `refresh`); `useWatchlist.load` has a latest-request guard, so Phase 5 05-03 must return `false` from a superseded load.
-- [Phase 4 → 5]: Phase 5 plans (6 in 4 waves) lift `useWatchlist` into `Dashboard` and make `load()` return `Promise<boolean>`.
+- [Phase 4]: Review warnings WR-01..WR-05 fixed (04-REVIEW-FIX.md); IN-01..IN-08 open (non-blocking).
+- [Phase 5]: Open code-review advisories WR-01..WR-03, IN-01..IN-04 in 05-REVIEW-DISPOSITION.md (non-blocking). WR-01: a lost chat response refreshes nothing and invites a resend that can re-run executed trades. WR-02: superseded watchlist load returns `false`, so overlapping loads skip the highlight. WR-03: unreachable chip `disabled` and a source-grep test.
 
 ## Deferred Items
 
@@ -95,6 +98,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16T23:48:31.157Z
-Stopped at: Phase 4 complete, Phase 5 planned and verified, ready to execute Phase 5
+Last session: 2026-10-17T00:27:40.007Z
+Stopped at: Phase 5 complete, ready to plan Phase 6
 Resume file: None

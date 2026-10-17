@@ -55,12 +55,12 @@ The backend already exists. See PROJECT.md "Validated" for the existing capabili
 
 ### AI Chat
 
-- [ ] **CHAT-01**: A docked, collapsible chat panel is open on load. It has a message input, a send button and a scrolling conversation for the session.
-- [ ] **CHAT-02**: A loading indicator shows while waiting for the LLM and is removed from the DOM when idle.
-- [ ] **CHAT-03**: Executed and failed trades and watchlist changes show inline under the assistant reply, each with its status and reason.
-- [ ] **CHAT-04**: A chat error (502) shows inline in the panel and the user's input is not lost.
-- [ ] **CHAT-05**: After a reply with successful actions, the watchlist, portfolio and P&L history refresh, and the rows the AI changed are briefly highlighted.
-- [ ] **CHAT-06**: Quick-prompt chips offer starter questions. They don't contain mock-trigger keywords such as buy, sell or add.
+- [x] **CHAT-01**: A docked, collapsible chat panel is open on load. It has a message input, a send button and a scrolling conversation for the session.
+- [x] **CHAT-02**: A loading indicator shows while waiting for the LLM and is removed from the DOM when idle.
+- [x] **CHAT-03**: Executed and failed trades and watchlist changes show inline under the assistant reply, each with its status and reason.
+- [x] **CHAT-04**: A chat error (502) shows inline in the panel and the user's input is not lost.
+- [x] **CHAT-05**: After a reply with successful actions, the watchlist, portfolio and P&L history refresh, and the rows the AI changed are briefly highlighted.
+- [x] **CHAT-06**: Quick-prompt chips offer starter questions. They don't contain mock-trigger keywords such as buy, sell or add.
 
 ### Integration & Quality
 
@@ -137,12 +137,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-02 | Phase 4 | Complete |
 | PORT-03 | Phase 4 | Complete |
 | PORT-04 | Phase 4 | Complete |
-| CHAT-01 | Phase 5 | Pending |
-| CHAT-02 | Phase 5 | Pending |
-| CHAT-03 | Phase 5 | Pending |
-| CHAT-04 | Phase 5 | Pending |
-| CHAT-05 | Phase 5 | Pending |
-| CHAT-06 | Phase 5 | Pending |
+| CHAT-01 | Phase 5 | Complete |
+| CHAT-02 | Phase 5 | Complete |
+| CHAT-03 | Phase 5 | Complete |
+| CHAT-04 | Phase 5 | Complete |
+| CHAT-05 | Phase 5 | Complete |
+| CHAT-06 | Phase 5 | Complete |
 | INT-01 | Phase 6 | Pending |
 | INT-02 | Phase 6 | Pending |
 | INT-03 | Phase 6 | Pending |
