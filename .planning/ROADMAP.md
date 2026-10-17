@@ -194,7 +194,7 @@ Plans:
   2. The full Playwright suite in `test/` passes against the container with `LLM_MOCK=true`, covering fresh start, watchlist, trading, portfolio charts, chat and SSE reconnect. Failures are fixed in the app, not by weakening the specs.
   3. `npm test` passes, with Vitest + RTL coverage of the price store and merge logic, flash triggering, watchlist add/remove, portfolio revaluation math and chat rendering and loading state.
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans executed
 
 Plans:
 **Wave 1**
@@ -202,7 +202,7 @@ Plans:
 - [x] 06-02-PLAN.md — `npm run test:docker` returns the Playwright exit status (stub-docker proof) and the compose test app binds 127.0.0.1:8010 (INT-03)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 06-03-PLAN.md — Ship gate: unit suite and INT-01 edge tests, rebuilt container passes the full Playwright suite on a fresh DB, compose path passes, backend suite, specs unchanged, user browser check of the start script (INT-01, INT-02, INT-03)
+- [x] 06-03-PLAN.md — Ship gate: unit suite and INT-01 edge tests, rebuilt container passes the full Playwright suite on a fresh DB, compose path passes, backend suite, specs unchanged, user browser check of the start script (INT-01, INT-02, INT-03)
 
 **UI hint**: no
 
@@ -220,4 +220,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 2 has no
 | 3. Live Watchlist & Header | 5/5 | Complete    | 2026-10-16 |
 | 4. Trading & Portfolio | 7/7 | Complete    | 2026-10-16 |
 | 5. AI Chat | 6/6 | Complete    | 2026-10-16 |
-| 6. Ship & E2E Gate | 2/3 | In Progress | - |
+| 6. Ship & E2E Gate | 3/3 | In Progress | - |
