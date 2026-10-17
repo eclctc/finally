@@ -31,13 +31,13 @@
     {
       "number": "6",
       "name": "Ship & E2E Gate",
-      "status": "pending"
+      "status": "in_progress"
     }
   ],
   "next": {
     "command": "/gsd-progress --next",
-    "label": "Advance to the next step (plan phase 6)",
-    "reason": "Phase 6 of 6 — needs a plan"
+    "label": "Advance to the next step",
+    "reason": "Phase 6 of 6 · 83% · executing"
   },
-  "updated_at": "2026-10-17T00:27:20.008Z"
+  "updated_at": "2026-10-17T01:15:58.747Z"
 }
